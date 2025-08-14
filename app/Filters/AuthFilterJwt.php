@@ -30,7 +30,7 @@ class AuthFilterJwt implements FilterInterface
         
             session()->set('data',(array) $data->data);
         }catch(\Exception $e){
-            return Services::response()->setStatusCode(ResponseInterface::HTTP_UNAUTHORIZED);
+            //return Services::response()->setStatusCode(ResponseInterface::HTTP_UNAUTHORIZED);
         }
     }
 
