@@ -106,31 +106,15 @@ class FuncionesModel extends Model
          }
       }
    }
-   public function get_ingreso_by_dni($data)
+
+   public function buscar_ubigeo($data)
    {
-      $builder = $this->db->table("adm_proceso_postulante a");
-      $builder->select("COUNT(*) AS cantidad");
-      $builder->where('a.numerodocumento',  $data->nro);
-      $builder->where('a.ingresante',  "2");
-      $builder->orderBy('a.proceso');
-      $builder->having('COUNT(*) >', 0);
-      $query = $builder->get();
-      $row = $query->getRow(0);
-      return  $row;
-   }
-   public function get_ingresos_by_dni($data)
-   {
-      $builder = $this->db->table("adm_proceso_postulante a");
-      $builder->select("p.descripcion");
-      $builder->join('adm_proceso p',  "p.proceso = a.proceso", 'inner');
-      $builder->where('a.numerodocumento',  $data->nro);
-      $builder->where('a.ingresante',  "2");
-      $builder->orderBy('a.proceso');
-      $builder->having('COUNT(*) >', 0);
+      $builder = $this->db->table("ubigeo a");
+      $builder->where('a.ubigeo',  $data->text);
+      $builder->orderBy('a.ubigeo');
       $query = $builder->get();
       return  $query->getResultArray();;
    }
-
    public function lista_departamento()
    {
       $sql = "SELECT DISTINCT departamento, dep FROM ubigeo order by dep";
@@ -149,5 +133,4 @@ class FuncionesModel extends Model
       $query = $this->db->query($sql);
       return  $query->getResultArray();;
    }
-
 }

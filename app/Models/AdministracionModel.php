@@ -15,6 +15,7 @@ class AdministracionModel extends Model
 
 		return $query;
 	}
+
 	public function modulo($data)
 	{
 		$builder = $this->db->table($data->modulo);
@@ -63,7 +64,7 @@ class AdministracionModel extends Model
 		$builder =  $this->db->table($data->modulo);
 		$builder->select("Count(*)");
 		$builder->where($data->modulo, $data->descripcion);
-		$builder->where("id_".$data->modulo, $data->id);
+		$builder->where("id_" . $data->modulo, $data->id);
 		$query = $builder->get();
 		if (count($query->getResultArray()) > 0) {
 			$errors[] = "Ya existe esta descripción";

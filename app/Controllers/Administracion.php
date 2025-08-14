@@ -20,6 +20,7 @@ class Administracion extends BaseController
         $data = array('rpta' => '1', 'items' => $data);
         return $this->response->setJSON($data);
     }
+
     public function modulo()
     {
         $data = json_decode(file_get_contents('php://input'));

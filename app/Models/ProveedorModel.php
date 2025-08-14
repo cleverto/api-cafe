@@ -9,8 +9,11 @@ class ProveedorModel extends Model
 
 	public function lista()
 	{
-		$builder = $this->db->table('producto a');
-		$builder->orderBy('a.producto');
+		$builder = $this->db->table('proveedor a');
+		$builder->select('a.*');
+		$builder->select('b.dis');
+		$builder->join('ubigeo b' , 'a.id_ubigeo = b.id_ubigeo', 'inner');
+		$builder->orderBy('a.proveedor');
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;

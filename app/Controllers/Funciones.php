@@ -48,6 +48,14 @@ class Funciones extends BaseController
         $data = array('items' => $t, 'items2' => $datos);
         echo json_encode($data);
     }
+    public function buscar_ubigeo()
+    {
+        $post = json_decode(file_get_contents('php://input'));
+        $model = new FuncionesModel();
+         $data = $model->buscar_ubigeo($post);
+        $rpta = array('rpta' => '1', 'items' => $data);
+        return $this->response->setJSON($rpta);
+    }
     public function valida_url()
     {
         $data = json_decode(file_get_contents('php://input'));
