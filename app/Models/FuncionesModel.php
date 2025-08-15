@@ -110,11 +110,12 @@ class FuncionesModel extends Model
    public function buscar_ubigeo($data)
    {
       $builder = $this->db->table("ubigeo a");
-      $builder->where('a.ubigeo',  $data->text);
-      $builder->orderBy('a.ubigeo');
+      $builder->like('a.ubigeo', $data->text);
+      $builder->orderBy('a.ubigeo', 'ASC');
       $query = $builder->get();
-      return  $query->getResultArray();;
+      return $query->getResultArray();
    }
+
    public function lista_departamento()
    {
       $sql = "SELECT DISTINCT departamento, dep FROM ubigeo order by dep";

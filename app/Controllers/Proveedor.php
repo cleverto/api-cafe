@@ -29,34 +29,77 @@ class Proveedor extends BaseController
     private function valores($data)
     {
         $datos = array(
-            'producto' => $data["producto"],
+            'id_ubigeo' => $data["id_ubigeo"],
+            'id_identidad' => "1",
+            'dni' => $data["dni"],
+            'proveedor' => $data["proveedor"],
+            'direccion' => $data["direccion"],
+            'telefono' => $data["telefono"],
         );
 
         return $datos;
     }
+    private function validar($datos)
+    {
+        $errors = array();
+        $model = new ProveedorModel();
 
+        $t = $model->existe_dni($datos);
+        if ($t > 0) {
+            $errors[] =  "Este numero de dni ya esta registrado";
+            return $errors;
+        }
+    }
+    private function validar_modificar($datos)
+    {
+        $errors = array();
+        $model = new ProveedorModel();
+
+        $t = $model->existe_dni_modificar($datos);
+        if ($t > 0) {
+            $errors[] =  "Este numero de dni ya esta registrado";
+            return $errors;
+        }
+    }
     public function guardar()
     {
-        $data = json_decode(file_get_contents('php://input'), true);
+        $post = json_decode(file_get_contents('php://input'), true);
 
-        $datos = $this->valores($data);
+        $datos = $this->valores($post);
         $model = new ProveedorModel();
-        if ($data["operacion"] == "0") {
+
+
+        if ($post["operacion"] == "0") {
+
+
+            $errors = $this->validar($datos);
+            $rpta = array('rpta' => '0', 'msg' => $errors);
+            if (!empty($errors)) {
+                return $this->response->setJSON($rpta);
+            }
+
+
             $id = $model->guardar($datos);
 
-            $data = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
+            $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {
-            $id = $model->modificar($data["idmodulo"], $datos);
-            $data = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
+            $errors = $this->validar_modificar($post);
+            $rpta = array('rpta' => '0', 'msg' => $errors);
+            if (!empty($errors)) {
+                return $this->response->setJSON($rpta);
+            }
+
+            $id = $model->modificar($post["idmodulo"], $datos);
+            $rpta = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
         }
 
-        return $this->response->setJSON($data);
+        return $this->response->setJSON($rpta);
     }
     public function eliminar()
     {
-        $data = json_decode(file_get_contents('php://input'));
+        $post = json_decode(file_get_contents('php://input'));
         $model = new ProveedorModel();
-        $t = $model->eliminar($data);
+        $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
         if ($t <= 0) {
             $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");

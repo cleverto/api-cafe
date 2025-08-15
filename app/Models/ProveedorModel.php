@@ -11,8 +11,8 @@ class ProveedorModel extends Model
 	{
 		$builder = $this->db->table('proveedor a');
 		$builder->select('a.*');
-		$builder->select('b.dis');
-		$builder->join('ubigeo b' , 'a.id_ubigeo = b.id_ubigeo', 'inner');
+		$builder->select('b.ubigeo');
+		$builder->join('ubigeo b', 'a.id_ubigeo = b.id_ubigeo', 'inner');
 		$builder->orderBy('a.proveedor');
 		$query = $builder->get();
 		$res = $query->getResultArray();
@@ -20,8 +20,11 @@ class ProveedorModel extends Model
 	}
 	public function modulo($id)
 	{
-		$builder = $this->db->table('producto a');
-		$builder->where('a.id_producto', $id);
+		$builder = $this->db->table('proveedor a');
+		$builder->select('a.*');
+		$builder->select('b.ubigeo');
+		$builder->join('ubigeo b', 'a.id_ubigeo = b.id_ubigeo', 'inner');
+		$builder->where('a.id_proveedor', $id);
 
 		$query = $builder->get();
 		$data = $query->getRowArray();
@@ -30,17 +33,29 @@ class ProveedorModel extends Model
 	}
 	public function guardar($data)
 	{
-		$builder = $this->db->table('producto');
+		$builder = $this->db->table('proveedor');
 		$builder->insert($data);
 		$id = $this->db->insertID();
 
 		return $id;
 	}
-
+	public function existe_dni($data)
+	{
+		$builder = $this->db->table('proveedor');
+		$builder->where('dni', $data["dni"]);
+		return $builder->countAllResults();
+	}
+	public function existe_dni_modificar($data)
+	{
+		$builder = $this->db->table('proveedor');
+		$builder->where('dni', $data["dni"]);
+		$builder->where('id_proveedor !=', $data["idmodulo"]);
+		return $builder->countAllResults();
+	}
 	public function modificar($id, $datos)
 	{
-		$db = $this->db->table('producto');
-		$db->where('id_producto', $id);
+		$db = $this->db->table('proveedor');
+		$db->where('id_proveedor', $id);
 		$db->update($datos);
 
 		return $this->db->affectedRows();
@@ -48,8 +63,8 @@ class ProveedorModel extends Model
 
 	public function eliminar($data)
 	{
-		$datos = array('id_producto' => $data->id);
-		$query = $this->db->table('producto')->delete($datos);
+		$datos = array('id_proveedor' => $data->id);
+		$query = $this->db->table('proveedor')->delete($datos);
 
 		return $query;
 	}
