@@ -48,6 +48,18 @@ class CompraModel extends Model
 		$builder->insert($data);
 		$id = $this->db->insertID();
 
+
+		$this->db->query("
+  INSERT INTO compra_detalle (
+    id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+  )
+  SELECT 
+    ? AS id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+  FROM compra_temp
+  WHERE id_usuario = ?", [$id, $data["id_usuario"]]);
+
 		return $id;
 	}
 	public function guardar_producto($data)
@@ -84,6 +96,13 @@ class CompraModel extends Model
 	{
 		$datos = array('id_compra' => $data->id);
 		$query = $this->db->table('compra')->delete($datos);
+
+		return $query;
+	}
+	public function eliminar_temp($id)
+	{
+		$datos = array('id_usuario' => $id);
+		$query = $this->db->table('compra_temp')->delete($datos);
 
 		return $query;
 	}

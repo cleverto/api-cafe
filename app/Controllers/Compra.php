@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\CompraModel;
+use App\Models\CreditoModel;
 use App\Models\FuncionesModel;
 
 class Compra extends BaseController
@@ -39,21 +40,23 @@ class Compra extends BaseController
         return $this->response->setJSON($rpta);
     }
 
-    private function valores($data)
+    private function valores($post)
     {
         $model = new FuncionesModel();
-        $nro_comprobante = $model->correlativo("1", "1",  $data["id_tipo_comprobante"]);
+        $nro_comprobante = $model->get_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+        $id_tipo_cambio = $model->get_tipo_cambio($post["id_moneda"], $post["fecha"]);
 
         $son = letras("123");
         $datos = array(
             'id_empresa' => "1",
             'id_sucursal' => "1",
             'id_almacen' => "1",
-            'id_proveedor' => $data["id_proveedor"],
-            'id_tipo_comprobante' => $data["id_tipo_comprobante"],
-            'id_tipo_cambio' => $data["id_tipo_cambio"],
-            'referencia' => $data["referencia"],
-            'total' => $data["total"],
+            'id_usuario' => session()->get("data")["id_usuario"],
+            'id_proveedor' => $post["id_proveedor"],
+            'id_tipo_comprobante' => $post["id_tipo_comprobante"],
+            'id_tipo_cambio' => $id_tipo_cambio,
+            'referencia' => $post["referencia"],
+            'total' => $post["total"],
             'son' => $son,
             'fecha' => date('Y-m-d H:i:s'),
             'nro_comprobante' =>  $nro_comprobante,
@@ -63,19 +66,18 @@ class Compra extends BaseController
     }
     private function valores_credito($data)
     {
+
         $datos = array(
             'id_empresa' => "1",
             'id_sucursal' => "1",
-            'id_almacen' => "1",
             'id_proveedor' => $data["id_proveedor"],
-            'id_tipo_cambio' => $data["id_tipo_cambio"],
-            'id_concepto' => '3',
-            'quien' => $data["proveedor"],
-            'nro_comprobante' => $data["nro_comprobante"],
+            'id_tipo_cambio' =>  $data["id_tipo_cambio"],
+            'movimiento' => '0',
+            'referencia' => $data["nro_comprobante"],
             'total' => $data["total"],
-            'fecha' => date('Y-m-d H:i:s'),
-            'movimiento' => "S",
-            'observacion' => "",
+            'fecha' => date('Y-m-d'),
+            'observaciones' => "",
+            'estado' => "0",
         );
 
         return $datos;
@@ -85,11 +87,11 @@ class Compra extends BaseController
 
         $datos = array(
             'id_detalle' => $data['id_detalle'],
-            'id_usuario'       => $data['id_usuario'],
-            'id_producto'       => $data['id_producto'],
-            'muestra'       => $data['muestra'],
+            'id_usuario' => $data['id_usuario'],
+            'id_producto' => $data['id_producto'],
+            'muestra' => $data['muestra'],
             'rendimiento' => $data['rendimiento'],
-            'segunda'     => "0",
+            'segunda'  => "0",
             'bola'        => "0",
             'cascara'     => "0",
             'humedad'     => $data['humedad'],
@@ -147,15 +149,26 @@ class Compra extends BaseController
         $datos = $this->valores($post);
         $model = new CompraModel();
 
-
         if ($post["operacion"] == "0") {
             $id = $model->guardar($datos);
 
-            $model = new FuncionesModel();
-            $model->actualizar_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+            // Actualizar correlativo
+            $model_funciones = new FuncionesModel();
+            $model_funciones->actualizar_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+
+            // registra cuenta por cobrar
+            $model_credito = new CreditoModel();
+            $datos_credito = $this->valores_credito($datos);
+            $id_credito = $model_credito->guardar($datos_credito);
+            $id_credito = $model_credito->guardar_compra($id, $id_credito);
+
+            // elimina temp detalle
+            $model->eliminar_temp($datos["id_usuario"]);
 
 
-            $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
+            // *********
+
+            $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'id_credito' => $id_credito);
         } else {
 
             $id = $model->modificar($post["idmodulo"], $datos);
@@ -173,13 +186,6 @@ class Compra extends BaseController
 
         if ($post["operacion"] == "0") {
             $id = $model->guardar_producto($datos);
-
-            
-            $model_credito = new CreditoModel();
-            $datos = $this->valores_credito($datos);
-            $id_credito = $model_credito->guardar($datos);
-            $model->guardar_credito_caja($id, $id_credito);
-
 
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {

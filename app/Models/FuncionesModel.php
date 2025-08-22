@@ -117,7 +117,7 @@ class FuncionesModel extends Model
       $query = $builder->get();
       return $query->getResultArray();
    }
-   public function correlativo($id_empresa, $id_sucursal, $id_tipo_comprobante)
+   public function get_correlativo($id_empresa, $id_sucursal, $id_tipo_comprobante)
    {
       $builder = $this->db->table("correlativo a");
       $builder->select('a.serie, a.correlativo, b.letra');
@@ -140,6 +140,21 @@ class FuncionesModel extends Model
       $nro_comprobante = $letra . $serie . '-' . $correlativo;
 
       return $nro_comprobante;
+   }
+   public function get_tipo_cambio($id_moneda, $fecha)
+   {
+      $builder = $this->db->table("tipo_cambio a");
+      $builder->select('a.id_tipo_cambio');
+      $builder->where('a.fecha', $fecha);
+      $builder->where('a.id_moneda', $id_moneda);
+      $query = $builder->get();
+
+      $item = "";
+      if ($query->getNumRows() > 0) {
+         $row = $query->getRow();
+         $item = $row->id_tipo_cambio;
+      }
+      return $item;
    }
    public function actualizar_correlativo($id_empresa, $id_sucursal, $id_tipo_comprobante)
    {

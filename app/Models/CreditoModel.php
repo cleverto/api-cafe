@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Models;
+
+use CodeIgniter\Model;
+
+class CreditoModel extends Model
+{
+
+	public function lista()
+	{
+		$builder = $this->db->table('producto a');
+		$builder->orderBy('a.producto');
+		$query = $builder->get();
+		$res = $query->getResultArray();
+		return $res;
+	}
+	public function modulo($id)
+	{
+		$builder = $this->db->table('producto a');
+		$builder->where('a.id_producto', $id);
+
+		$query = $builder->get();
+		$data = $query->getRowArray();
+
+		return $data;
+	}
+	public function guardar($data)
+	{
+		$builder = $this->db->table('credito');
+		$builder->insert($data);
+		$id = $this->db->insertID();
+
+		return $id;
+	}
+	public function guardar_compra($id, $id_credito)
+	{
+		$data = array("id_compra" => $id, "id_credito" => $id_credito);
+
+		$builder = $this->db->table('credito_compra');
+		$builder->insert($data);
+		$id = $this->db->insertID();
+
+		return $id;
+	}
+	public function modificar($id, $datos)
+	{
+		$db = $this->db->table('producto');
+		$db->where('id_producto', $id);
+		$db->update($datos);
+
+		return $this->db->affectedRows();
+	}
+
+	public function eliminar($data)
+	{
+		$datos = array('id_producto' => $data->id);
+		$query = $this->db->table('producto')->delete($datos);
+
+		return $query;
+	}
+}
