@@ -7,6 +7,7 @@ use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\FuncionesModel;
 use App\Models\PostulanteModel;
+use App\Models\ProveedorModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use stdClass;
 
@@ -16,12 +17,25 @@ class Funciones extends BaseController
     public function get_nombre()
     {
         $post = json_decode(file_get_contents('php://input'));
+
+        if ($post->tipo == "dni") {
+            $model = new ProveedorModel();
+            $row = $model->get_by_dni($post->nro);
+            if (isset($row)) {
+                $data = array(
+                    'id_proveedor' => $row->id_proveedor,
+                    'nombrecompleto' => $row->proveedor,
+                );
+                $rpta = array('rpta' => '1', 'items' => $data);
+                return $this->response->setJSON($rpta);
+            }
+        }
         $model = new FuncionesModel();
         $data = $model->get_dni_externo($post);
-
-        if (empty($datos)) {
+        if (empty($data)) {
             $data = $model->get_dni_sunat($post);
         }
+        $data["id_proveedor"] = "";
 
         $rpta = array('rpta' => '1', 'items' => $data);
         return $this->response->setJSON($rpta);
@@ -39,7 +53,7 @@ class Funciones extends BaseController
         $data = json_decode(file_get_contents('php://input'));
         $model = new FuncionesModel();
         $dato = $model->get_ingreso_by_dni($data);
-        $datos = $model->get_ingresos_by_dni($data);
+        $datos = $model->get_inresos_by_dni($data);
 
         $t = "0";
         if ($dato !== null) {
@@ -48,11 +62,12 @@ class Funciones extends BaseController
         $data = array('items' => $t, 'items2' => $datos);
         echo json_encode($data);
     }
+
     public function buscar_ubigeo()
     {
         $post = json_decode(file_get_contents('php://input'));
         $model = new FuncionesModel();
-         $data = $model->buscar_ubigeo($post);
+        $data = $model->buscar_ubigeo($post);
         $rpta = array('rpta' => '1', 'items' => $data);
         return $this->response->setJSON($rpta);
     }

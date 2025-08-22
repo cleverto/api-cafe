@@ -51,6 +51,7 @@ class FuncionesModel extends Model
                'nombres' => $nombres,
                'paterno' => $apellidoPaterno,
                'materno' => $apellidoMaterno,
+               'nombrecompleto' => $nombre,
             );
             return $data;
          } else {
@@ -99,7 +100,8 @@ class FuncionesModel extends Model
                'origen' => "0",
                'nombres' => $nombres,
                'paterno' => $paterno,
-               'materno' => $materno
+               'materno' => $materno,
+               'nombrecompleto' => $nombres . " " . $paterno . " " . $materno,
             );
 
             return $data;
@@ -115,7 +117,39 @@ class FuncionesModel extends Model
       $query = $builder->get();
       return $query->getResultArray();
    }
+   public function correlativo($id_empresa, $id_sucursal, $id_tipo_comprobante)
+   {
+      $builder = $this->db->table("correlativo a");
+      $builder->select('a.serie, a.correlativo, b.letra');
+      $builder->join('tipo_comprobante b', "b.id_tipo_comprobante=a.id_tipo_comprobante", "inner");
+      $builder->where('a.id_empresa', $id_empresa);
+      $builder->where('a.id_sucursal', $id_sucursal);
+      $builder->where('a.id_tipo_comprobante', $id_tipo_comprobante);
+      $query = $builder->get();
 
+
+      $serie = "001";
+      $letra = "L";
+      $correlativo = 1;
+      if ($query->getNumRows() > 0) {
+         $row = $query->getRow();
+         $serie = $row->serie;
+         $letra = $row->letra;
+         $letra = $row->correlativo;
+      }
+      $nro_comprobante = $letra . $serie . '-' . $correlativo;
+
+      return $nro_comprobante;
+   }
+   public function actualizar_correlativo($id_empresa, $id_sucursal, $id_tipo_comprobante)
+   {
+      $builder = $this->db->table('correlativo');
+      $builder->where('id_empresa', $id_empresa);
+      $builder->where('id_sucursal', $id_sucursal);
+      $builder->where('id_tipo_comprobante', $id_tipo_comprobante);
+      $builder->set('correlativo', 'correlativo + 1', false);
+      $builder->update();
+   }
    public function lista_departamento()
    {
       $sql = "SELECT DISTINCT departamento, dep FROM ubigeo order by dep";

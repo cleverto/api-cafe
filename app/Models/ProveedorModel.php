@@ -31,6 +31,17 @@ class ProveedorModel extends Model
 
 		return $data;
 	}
+	public function get_by_dni($id)
+	{
+		$builder = $this->db->table('proveedor a');
+		$builder->select('a.proveedor, a. id_proveedor');
+		$builder->where('a.dni', $id);
+
+		$query = $builder->get();
+		$data = $query->getRow(0);
+
+		return $data;
+	}
 	public function guardar($data)
 	{
 		$builder = $this->db->table('proveedor');

@@ -5,10 +5,14 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\CompraModel;
+use App\Models\FuncionesModel;
 
 class Compra extends BaseController
 {
-
+    public function __construct()
+    {
+        helper('util_helper');
+    }
     public function lista()
     {
         $model = new CompraModel();
@@ -37,13 +41,41 @@ class Compra extends BaseController
 
     private function valores($data)
     {
+        $model = new FuncionesModel();
+        $nro_comprobante = $model->correlativo("1", "1",  $data["id_tipo_comprobante"]);
+
+        $son = letras("123");
         $datos = array(
-            'id_ubigeo' => $data["id_ubigeo"],
-            'id_identidad' => "1",
-            'dni' => $data["dni"],
-            'proveedor' => $data["proveedor"],
-            'direccion' => $data["direccion"],
-            'telefono' => $data["telefono"],
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_almacen' => "1",
+            'id_proveedor' => $data["id_proveedor"],
+            'id_tipo_comprobante' => $data["id_tipo_comprobante"],
+            'id_tipo_cambio' => $data["id_tipo_cambio"],
+            'referencia' => $data["referencia"],
+            'total' => $data["total"],
+            'son' => $son,
+            'fecha' => date('Y-m-d H:i:s'),
+            'nro_comprobante' =>  $nro_comprobante,
+        );
+
+        return $datos;
+    }
+    private function valores_credito($data)
+    {
+        $datos = array(
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_almacen' => "1",
+            'id_proveedor' => $data["id_proveedor"],
+            'id_tipo_cambio' => $data["id_tipo_cambio"],
+            'id_concepto' => '3',
+            'quien' => $data["proveedor"],
+            'nro_comprobante' => $data["nro_comprobante"],
+            'total' => $data["total"],
+            'fecha' => date('Y-m-d H:i:s'),
+            'movimiento' => "S",
+            'observacion' => "",
         );
 
         return $datos;
@@ -96,17 +128,7 @@ class Compra extends BaseController
 
         return $datos;
     }
-    private function validar($datos)
-    {
-        $errors = array();
-        $model = new CompraModel();
 
-        $t = $model->existe_dni($datos);
-        if ($t > 0) {
-            $errors[] =  "Este numero de dni ya esta registrado";
-            return $errors;
-        }
-    }
     private function validar_modificar($datos)
     {
         $errors = array();
@@ -127,24 +149,14 @@ class Compra extends BaseController
 
 
         if ($post["operacion"] == "0") {
-
-
-            $errors = $this->validar($datos);
-            $rpta = array('rpta' => '0', 'msg' => $errors);
-            if (!empty($errors)) {
-                return $this->response->setJSON($rpta);
-            }
-
-
             $id = $model->guardar($datos);
+
+            $model = new FuncionesModel();
+            $model->actualizar_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+
 
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {
-            $errors = $this->validar_modificar($post);
-            $rpta = array('rpta' => '0', 'msg' => $errors);
-            if (!empty($errors)) {
-                return $this->response->setJSON($rpta);
-            }
 
             $id = $model->modificar($post["idmodulo"], $datos);
             $rpta = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
@@ -161,6 +173,14 @@ class Compra extends BaseController
 
         if ($post["operacion"] == "0") {
             $id = $model->guardar_producto($datos);
+
+            
+            $model_credito = new CreditoModel();
+            $datos = $this->valores_credito($datos);
+            $id_credito = $model_credito->guardar($datos);
+            $model->guardar_credito_caja($id, $id_credito);
+
+
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {
             $errors = $this->validar_modificar($post);

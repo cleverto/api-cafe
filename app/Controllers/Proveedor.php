@@ -25,7 +25,14 @@ class Proveedor extends BaseController
         $rpta = array('rpta' => '1', 'items' => $items);
         return $this->response->setJSON($rpta);
     }
-
+    public function get_by_dni()
+    {
+        $data = json_decode(file_get_contents('php://input'));
+        $model = new ProveedorModel();
+        $items = $model->get_by_dni($data->id);
+        $rpta = array('items' => $items);
+        return $this->response->setJSON($rpta);
+    }
     private function valores($data)
     {
         $datos = array(
