@@ -24,11 +24,15 @@ class Compra extends BaseController
     }
     public function lista_temp()
     {
-        $data = json_decode(file_get_contents('php://input'), true);
+        $post = json_decode(file_get_contents('php://input'), true);
+        $id_usuario = session()->get("data")["id_usuario"];
         $model = new CompraModel();
-        $data = $model->lista_temp($data["id"]);
+        $data = $model->lista_temp($post["id"], $id_usuario);
 
-        $rpta = array('items' => $data);
+        // suma total
+        $total = $model->get_suma_total($post["id"], $id_usuario);
+
+        $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
     public function modulo()
@@ -44,7 +48,7 @@ class Compra extends BaseController
     {
         $model = new FuncionesModel();
         $nro_comprobante = $model->get_correlativo("1", "1",  $post["id_tipo_comprobante"]);
-        $id_tipo_cambio = $model->get_tipo_cambio($post["id_moneda"], $post["fecha"]);
+
 
         $son = letras("123");
         $datos = array(
@@ -54,7 +58,7 @@ class Compra extends BaseController
             'id_usuario' => session()->get("data")["id_usuario"],
             'id_proveedor' => $post["id_proveedor"],
             'id_tipo_comprobante' => $post["id_tipo_comprobante"],
-            'id_tipo_cambio' => $id_tipo_cambio,
+            'id_moneda' => $post["id_moneda"],
             'referencia' => $post["referencia"],
             'total' => $post["total"],
             'son' => $son,
@@ -71,10 +75,11 @@ class Compra extends BaseController
             'id_empresa' => "1",
             'id_sucursal' => "1",
             'id_proveedor' => $data["id_proveedor"],
-            'id_tipo_cambio' =>  $data["id_tipo_cambio"],
+            'id_moneda' =>  $data["id_moneda"],
             'movimiento' => '0',
             'referencia' => $data["nro_comprobante"],
             'total' => $data["total"],
+            'saldo' => $data["total"],
             'fecha' => date('Y-m-d'),
             'observaciones' => "",
             'estado' => "0",
@@ -87,6 +92,7 @@ class Compra extends BaseController
 
         $datos = array(
             'id_detalle' => $data['id_detalle'],
+            'id_modulo' => $data['idmodulo'],
             'id_usuario' => $data['id_usuario'],
             'id_producto' => $data['id_producto'],
             'muestra' => $data['muestra'],
@@ -142,12 +148,31 @@ class Compra extends BaseController
             return $errors;
         }
     }
+    private function validar($datos)
+    {
+        $errors = array();
+        if ($datos["id_moneda"] == "USD") {
+            $model = new FuncionesModel();
+            $id_tipo_cambio = $model->get_tipo_cambio($datos["id_moneda"], $datos["fecha"]);
+
+            if (empty($id_tipo_cambio) || !isset($id_tipo_cambio)) {
+                $errors[] =  "No existe el tipo de cambio, tiene que registrarlo";
+                return $errors;
+            }
+        }
+    }
     public function guardar()
     {
         $post = json_decode(file_get_contents('php://input'), true);
 
         $datos = $this->valores($post);
         $model = new CompraModel();
+
+        $errors = $this->validar($datos);
+        $rpta = array('rpta' => '0', 'msg' => $errors);
+        if (!empty($errors)) {
+            return $this->response->setJSON($rpta);
+        }
 
         if ($post["operacion"] == "0") {
             $id = $model->guardar($datos);
@@ -160,14 +185,15 @@ class Compra extends BaseController
             $model_credito = new CreditoModel();
             $datos_credito = $this->valores_credito($datos);
             $id_credito = $model_credito->guardar($datos_credito);
-            $id_credito = $model_credito->guardar_compra($id, $id_credito);
+
+            // registra relación de compra y credito
+            $model->guardar_credito_compra($id, $id_credito);
 
             // elimina temp detalle
             $model->eliminar_temp($datos["id_usuario"]);
 
 
             // *********
-
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'id_credito' => $id_credito);
         } else {
 
@@ -187,7 +213,10 @@ class Compra extends BaseController
         if ($post["operacion"] == "0") {
             $id = $model->guardar_producto($datos);
 
-            $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
+            // suma total
+            $total = $model->get_suma_total($id, $datos["id_usuario"]);
+
+            $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'total' => $total);
         } else {
             $errors = $this->validar_modificar($post);
             $rpta = array('rpta' => '0', 'msg' => $errors);
@@ -208,18 +237,23 @@ class Compra extends BaseController
         $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
         if ($t <= 0) {
+
             $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");
         }
         return $this->response->setJSON($rpta);
     }
     public function eliminar_producto()
     {
-        $post = json_decode(file_get_contents('php://input'));
+        $post = json_decode(file_get_contents('php://input'),true);
         $model = new CompraModel();
         $t = $model->eliminar_producto($post);
-        $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
-        if ($t <= 0) {
-            $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");
+        $rpta = array('rpta' => '0', 'msg' => "El registro no se puede eliminar");
+        if ($t > 0) {
+            $id_usuario = session()->get("data")["id_usuario"];
+            // suma total
+            $total = $model->get_suma_total($post["idmodulo"], $id_usuario);
+
+            $rpta = array('rpta' => '1', 'msg' => "El registro ha sido eliminado", "total" => $total);
         }
         return $this->response->setJSON($rpta);
     }

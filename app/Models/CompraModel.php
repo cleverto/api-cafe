@@ -18,13 +18,15 @@ class CompraModel extends Model
 		$res = $query->getResultArray();
 		return $res;
 	}
-	public function lista_temp($id)
+	public function lista_temp($id, $id_usuario)
 	{
 		$builder = $this->db->table('compra_temp a');
 		$builder->select('a.*');
 		$builder->select('b.producto, b.id_categoria');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
-		$builder->where('a.id_usuario', $id);
+		$builder->where('a.id_modulo', $id);
+		$builder->where('a.id_usuario', $id_usuario);
+
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
@@ -33,14 +35,30 @@ class CompraModel extends Model
 	{
 		$builder = $this->db->table('compra a');
 		$builder->select('a.*');
-		$builder->select('b.ubigeo');
-		$builder->join('ubigeo b', 'a.id_ubigeo = b.id_ubigeo', 'inner');
+		$builder->select('b.proveedor, c.simbolo');
+		$builder->select('d.id_credito');
+		// 	$builder->select("CASE 
+		//     WHEN a.id_moneda = 'USD' THEN ROUND(a.total * d.tipo_cambio,2)
+		//     ELSE a.total
+		// END AS total_pen");
+		$builder->join('proveedor b', 'b.id_proveedor = a.id_proveedor', 'inner');
+		$builder->join('moneda c', 'c.id_moneda = a.id_moneda', 'inner');
+		$builder->join('credito_compra d', 'd.id_compra = a.id_compra', 'inner');
+		//$builder->join('tipo_cambio d', 'd.id_moneda = a.id_moneda and d.fecha=a.fecha', 'left');
 		$builder->where('a.id_compra', $id);
 
 		$query = $builder->get();
-		$data = $query->getRowArray();
+		return $query->getRowArray();
+	}
+	public function get_suma_total($id, $id_usuario)
+	{
+		$builder = $this->db->table('compra_temp a');
+		$builder->selectSum('total');
+		$builder->where('id_modulo', $id);
+		$builder->where('id_usuario', $id_usuario);
+		$query = $builder->get()->getRow();
 
-		return $data;
+		return $query->total ?? 0;;
 	}
 	public function guardar($data)
 	{
@@ -65,6 +83,16 @@ class CompraModel extends Model
 	public function guardar_producto($data)
 	{
 		$builder = $this->db->table('compra_temp');
+		$builder->insert($data);
+		$id = $this->db->insertID();
+
+		return $id;
+	}
+	public function guardar_credito_compra($id, $id_credito)
+	{
+		$data = array("id_compra" => $id, "id_credito" => $id_credito);
+
+		$builder = $this->db->table('credito_compra');
 		$builder->insert($data);
 		$id = $this->db->insertID();
 
@@ -106,9 +134,9 @@ class CompraModel extends Model
 
 		return $query;
 	}
-	public function eliminar_producto($data)
+	public function eliminar_producto($post)
 	{
-		$datos = array('id_detalle' => $data->id);
+		$datos = array('id_detalle' => $post["id"]);
 		$query = $this->db->table('compra_temp')->delete($datos);
 
 		return $query;

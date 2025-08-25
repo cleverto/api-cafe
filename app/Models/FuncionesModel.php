@@ -135,7 +135,7 @@ class FuncionesModel extends Model
          $row = $query->getRow();
          $serie = $row->serie;
          $letra = $row->letra;
-         $letra = $row->correlativo;
+         $correlativo = $row->correlativo;
       }
       $nro_comprobante = $letra . $serie . '-' . $correlativo;
 
