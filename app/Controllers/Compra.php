@@ -16,8 +16,27 @@ class Compra extends BaseController
     }
     public function lista()
     {
+        $post = json_decode(file_get_contents('php://input'), true);
         $model = new CompraModel();
-        $data = $model->lista();
+        $data = $model->lista($post);
+
+        $rpta = array('items' => $data);
+        return $this->response->setJSON($rpta);
+    }
+    public function buscar()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new CompraModel();
+        $items = $model->buscar($post);
+
+        $rpta = array('items' => $items);
+        return $this->response->setJSON($rpta);
+    }
+    public function lista_detalle()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new CompraModel();
+        $data = $model->lista_detalle($post["id"]);
 
         $rpta = array('items' => $data);
         return $this->response->setJSON($rpta);
@@ -244,7 +263,7 @@ class Compra extends BaseController
     }
     public function eliminar_producto()
     {
-        $post = json_decode(file_get_contents('php://input'),true);
+        $post = json_decode(file_get_contents('php://input'), true);
         $model = new CompraModel();
         $t = $model->eliminar_producto($post);
         $rpta = array('rpta' => '0', 'msg' => "El registro no se puede eliminar");

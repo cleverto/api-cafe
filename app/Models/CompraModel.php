@@ -7,13 +7,38 @@ use CodeIgniter\Model;
 class CompraModel extends Model
 {
 
-	public function lista()
+	public function lista($post)
 	{
 		$builder = $this->db->table('compra a');
 		$builder->select('a.*');
-		$builder->select('b.ubigeo');
-		$builder->join('ubigeo b', 'a.id_ubigeo = b.id_ubigeo', 'inner');
-		$builder->orderBy('a.compra');
+		$builder->select('b.proveedor');
+		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
+		$builder->orderBy('a.fecha');
+		$builder->where('a.id_Compra', $post["id"]);
+		$query = $builder->get();
+		$res = $query->getResultArray();
+		return $res;
+	}
+	public function buscar($post)
+	{
+		$builder = $this->db->table('compra a');
+		$builder->select('a.*');
+		$builder->select('b.proveedor');
+		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
+		$builder->where('a.fecha', $post["desde"]);
+		$builder->orderBy('a.fecha');
+		$query = $builder->get();
+		$res = $query->getResultArray();
+		return $res;
+	}
+	public function lista_detalle($id)
+	{
+		$builder = $this->db->table('compra_detalle a');
+		$builder->select('a.*');
+		$builder->select('b.producto, b.id_categoria');
+		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
+		$builder->where('a.id_compra', $id);
+
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
@@ -31,6 +56,7 @@ class CompraModel extends Model
 		$res = $query->getResultArray();
 		return $res;
 	}
+
 	public function modulo($id)
 	{
 		$builder = $this->db->table('compra a');
@@ -50,6 +76,7 @@ class CompraModel extends Model
 		$query = $builder->get();
 		return $query->getRowArray();
 	}
+
 	public function get_suma_total($id, $id_usuario)
 	{
 		$builder = $this->db->table('compra_temp a');
