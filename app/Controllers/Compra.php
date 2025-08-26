@@ -32,15 +32,7 @@ class Compra extends BaseController
         $rpta = array('items' => $items);
         return $this->response->setJSON($rpta);
     }
-    public function lista_detalle()
-    {
-        $post = json_decode(file_get_contents('php://input'), true);
-        $model = new CompraModel();
-        $data = $model->lista_detalle($post["id"]);
 
-        $rpta = array('items' => $data);
-        return $this->response->setJSON($rpta);
-    }
     public function lista_temp()
     {
         $post = json_decode(file_get_contents('php://input'), true);

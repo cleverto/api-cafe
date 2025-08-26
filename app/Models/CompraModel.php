@@ -9,12 +9,12 @@ class CompraModel extends Model
 
 	public function lista($post)
 	{
-		$builder = $this->db->table('compra a');
+		$builder = $this->db->table('compra_detalle a');
 		$builder->select('a.*');
-		$builder->select('b.proveedor');
-		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
-		$builder->orderBy('a.fecha');
-		$builder->where('a.id_Compra', $post["id"]);
+		$builder->select('b.producto, b.id_categoria');
+		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
+		$builder->where('a.id_compra', $post["id"]);
+
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
@@ -31,18 +31,7 @@ class CompraModel extends Model
 		$res = $query->getResultArray();
 		return $res;
 	}
-	public function lista_detalle($id)
-	{
-		$builder = $this->db->table('compra_detalle a');
-		$builder->select('a.*');
-		$builder->select('b.producto, b.id_categoria');
-		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
-		$builder->where('a.id_compra', $id);
 
-		$query = $builder->get();
-		$res = $query->getResultArray();
-		return $res;
-	}
 	public function lista_temp($id, $id_usuario)
 	{
 		$builder = $this->db->table('compra_temp a');
