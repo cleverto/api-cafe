@@ -4,12 +4,8 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
-use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\FuncionesModel;
-use App\Models\PostulanteModel;
 use App\Models\ProveedorModel;
-use CodeIgniter\Exceptions\PageNotFoundException;
-use stdClass;
 
 class Funciones extends BaseController
 {
@@ -35,7 +31,22 @@ class Funciones extends BaseController
         if (empty($data)) {
             $data = $model->get_dni_sunat($post);
         }
-        $data["id_proveedor"] = "";
+
+        if (!empty($data)) {
+            $datos = array(
+                'id_ubigeo' => "060801",
+                'id_identidad' => "1",
+                'dni' => $post->nro,
+                'proveedor' => $data["nombrecompleto"],
+                'tipo' => "0",
+                'direccion' => "",
+                'telefono' => "",
+            );
+            $model_proveedor = new ProveedorModel();
+            $id = $model_proveedor->guardar($datos);
+
+            $data["id_proveedor"] =  $id;
+        }
 
         $rpta = array('rpta' => '1', 'items' => $data);
         return $this->response->setJSON($rpta);
