@@ -52,6 +52,16 @@ class CreditoModel extends Model
 
 		return $saldo;
 	}
+	public function get_id_by_compra($id)
+	{
+		$builder = $this->db->table('credito_compra');
+		$builder->select('id_credito');
+		$builder->where('id_compra', $id);
+		$query = $builder->get()->getRow();
+		$id = $query->id_credito ?? 0;
+
+		return $id;
+	}
 
 	public function modulo_origen($post)
 	{
@@ -93,7 +103,7 @@ class CreditoModel extends Model
 
 		return $id;
 	}
-	private function set_saldo($data)
+	public function set_saldo($data)
 	{
 		// Sumar montos del detalle
 		$builder = $this->db->table('credito_detalle');

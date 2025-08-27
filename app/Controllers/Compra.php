@@ -68,13 +68,14 @@ class Compra extends BaseController
         $model = new FuncionesModel();
         $nro_comprobante = $model->get_correlativo("1", "1",  $post["id_tipo_comprobante"]);
 
+        $id_usuario = session()->get("data")["id_usuario"];
 
         $son = letras("123");
         $datos = array(
             'id_empresa' => "1",
             'id_sucursal' => "1",
             'id_almacen' => "1",
-            'id_usuario' => session()->get("data")["id_usuario"],
+            'id_usuario' => $id_usuario,
             'id_proveedor' => $post["id_proveedor"],
             'id_tipo_comprobante' => $post["id_tipo_comprobante"],
             'id_moneda' => $post["id_moneda"],
@@ -108,11 +109,10 @@ class Compra extends BaseController
     }
     private function valores_producto($data)
     {
-
+        $id_usuario = session()->get("data")["id_usuario"];
         $datos = array(
-            'id_detalle' => $data['id_detalle'],
             'id_modulo' => $data['idmodulo'],
-            'id_usuario' => $data['id_usuario'],
+            'id_usuario' => $id_usuario,
             'id_producto' => $data['id_producto'],
             'muestra' => $data['muestra'],
             'rendimiento' => $data['rendimiento'],
@@ -216,8 +216,29 @@ class Compra extends BaseController
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'id_credito' => $id_credito);
         } else {
 
-            $id = $model->modificar($post["idmodulo"], $datos);
-            $rpta = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
+            $t = $model->modificar($post["idmodulo"], $datos);
+
+            // recupera id del credito
+            $model_credito = new CreditoModel();
+            $id_credito = $model_credito->get_id_by_compra($post["idmodulo"]);
+
+            // registra cuenta por cobrar
+
+            $datos_credito = $this->valores_credito($datos);
+            $model_credito->modificar($id_credito, $datos_credito);
+
+            // actualiza el saldo del credito porque total puede cambiar
+            $model_credito->set_Saldo(["id_credito" => $id_credito]);
+
+            // elimina temp detalle
+            $model->eliminar_temp_by_id_modulo($post["idmodulo"]);
+
+
+            $rpta = array('rpta' => '1', 'msg' => "El registro no se puede modificar");
+            if ($t > 0) {
+
+                $rpta = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id_credito' => $id_credito);
+            }
         }
 
         return $this->response->setJSON($rpta);
@@ -229,6 +250,22 @@ class Compra extends BaseController
         $datos = $this->valores_producto($post);
         $model = new CompraModel();
 
+
+
+
+        $id = $model->guardar_producto($datos);
+
+        // suma total
+        if ($post["operacion"] == "0") {
+            $total = $model->get_suma_total($id, $datos["id_usuario"]);
+        } else {
+            $total = $model->get_suma_total($post["idmodulo"], $datos["id_usuario"]);
+        }
+
+        $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'total' => $total);
+
+        return $this->response->setJSON($rpta);
+
         if ($post["operacion"] == "0") {
             $id = $model->guardar_producto($datos);
 
@@ -237,13 +274,16 @@ class Compra extends BaseController
 
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'total' => $total);
         } else {
-            $errors = $this->validar_modificar($post);
-            $rpta = array('rpta' => '0', 'msg' => $errors);
-            if (!empty($errors)) {
-                return $this->response->setJSON($rpta);
-            }
+            // $errors = $this->validar_modificar($post);
+            // $rpta = array('rpta' => '0', 'msg' => $errors);
+            // if (!empty($errors)) {
+            //     return $this->response->setJSON($rpta);
+            // }
 
-            $id = $model->modificar($post["idmodulo"], $datos);
+            $id = $model->guardar_producto($datos);
+            // suma total
+            $total = $model->get_suma_total($post["idmodulo"], $datos["id_usuario"]);
+
             $rpta = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
         }
 
