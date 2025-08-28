@@ -9,29 +9,61 @@ class CompraModel extends Model
 
 	public function lista($post)
 	{
-		$builder = $this->db->table('compra_detalle a');
+
+
+
+		$datos = array('id_modulo' => $post["id"]);
+		 $this->db->table('compra_temp')->delete($datos);
+
+		$id_usuario = session()->get("data")["id_usuario"];
+		$this->db->query("
+  INSERT INTO compra_temp (
+    id_modulo, id_producto, id_usuario, muestra, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+  )
+  SELECT 
+    ? AS id_modulo, id_producto,  ? as id_usuario, muestra, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+  FROM compra_detalle
+  WHERE id_compra = ?", [$post["id"], $id_usuario, $post["id"]]);
+
+
+
+  		$builder = $this->db->table('compra_temp a');
 		$builder->select('a.*');
 		$builder->select('b.producto, b.id_categoria');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
-		$builder->where('a.id_compra', $post["id"]);
-
+		$builder->where('a.id_modulo', $post["id"]);
 		$query = $builder->get();
-		$res = $query->getResultArray();
-		return $res;
+		$data =  $query->getResultArray();
+
+
+		return $data;
 	}
 	public function buscar($post)
 	{
 		$builder = $this->db->table('compra a');
 		$builder->select('a.*');
 		$builder->select('b.proveedor');
+		$builder->select('c.id_credito');
 		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
+		$builder->join('credito_compra c', 'a.id_compra = c.id_compra', 'inner');
 		$builder->where('a.fecha', $post["desde"]);
 		$builder->orderBy('a.fecha');
 		$query = $builder->get();
-		$res = $query->getResultArray();
-		return $res;
+		return  $query->getResultArray();;
 	}
+	public function lista_detalle($id)
+	{
+		$builder = $this->db->table('compra_detalle a');
+		$builder->select('a.*');
+		$builder->select('b.producto, b.id_categoria');
+		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
+		$builder->where('a.id_compra', $id);
 
+		$query = $builder->get();
+		return  $query->getResultArray();;
+	}
 	public function lista_temp($id, $id_usuario)
 	{
 		$builder = $this->db->table('compra_temp a');
@@ -42,15 +74,14 @@ class CompraModel extends Model
 		$builder->where('a.id_usuario', $id_usuario);
 
 		$query = $builder->get();
-		$res = $query->getResultArray();
-		return $res;
+		return  $query->getResultArray();;
 	}
 
 	public function modulo($id)
 	{
 		$builder = $this->db->table('compra a');
 		$builder->select('a.*');
-		$builder->select('b.proveedor, c.simbolo');
+		$builder->select('b.proveedor, b.dni, c.simbolo');
 		$builder->select('d.id_credito');
 		// 	$builder->select("CASE 
 		//     WHEN a.id_moneda = 'USD' THEN ROUND(a.total * d.tipo_cambio,2)
@@ -76,10 +107,10 @@ class CompraModel extends Model
 
 		return $query->total ?? 0;;
 	}
-	public function guardar($data)
+	public function guardar($datos)
 	{
 		$builder = $this->db->table('compra');
-		$builder->insert($data);
+		$builder->insert($datos);
 		$id = $this->db->insertID();
 
 
@@ -92,7 +123,7 @@ class CompraModel extends Model
     ? AS id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
     descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
   FROM compra_temp
-  WHERE id_usuario = ?", [$id, $data["id_usuario"]]);
+  WHERE id_usuario = ?", [$id, $datos["id_usuario"]]);
 
 		return $id;
 	}
@@ -100,9 +131,8 @@ class CompraModel extends Model
 	{
 		$builder = $this->db->table('compra_temp');
 		$builder->insert($data);
-		$id = $this->db->insertID();
+		return $this->db->insertID();
 
-		return $id;
 	}
 	public function guardar_credito_compra($id, $id_credito)
 	{
@@ -132,8 +162,23 @@ class CompraModel extends Model
 		$db = $this->db->table('compra');
 		$db->where('id_compra', $id);
 		$db->update($datos);
+		$t = $this->db->affectedRows();
 
-		return $this->db->affectedRows();
+		$datos_compra = array('id_compra' => $id);
+		$this->db->table('compra_detalle')->delete($datos_compra);
+
+		$this->db->query("
+  INSERT INTO compra_detalle (
+    id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+  )
+  SELECT 
+    ? AS id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+  FROM compra_temp
+  WHERE id_usuario = ?", [$id, $datos["id_usuario"]]);
+
+		return $t;
 	}
 
 	public function eliminar($data)
@@ -146,6 +191,13 @@ class CompraModel extends Model
 	public function eliminar_temp($id)
 	{
 		$datos = array('id_usuario' => $id);
+		$query = $this->db->table('compra_temp')->delete($datos);
+
+		return $query;
+	}
+	public function eliminar_temp_by_id_modulo($id)
+	{
+		$datos = array('id_modulo' => $id);
 		$query = $this->db->table('compra_temp')->delete($datos);
 
 		return $query;
