@@ -18,13 +18,15 @@ class CajaModel extends Model
 	public function lista_by_usuario($post)
 	{
 		$builder = $this->db->table('caja a');
+		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor');
+		$builder->join('moneda c', 'a.id_moneda=c.id_moneda');
 		$builder->where('a.id_usuario', $post["id_usuario"]);
 		$builder->orderBy('a.registro');
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
 	}
-	public function apertura()
+	public function apertura($moneda)
 	{
 		$builder =  $this->db->table('caja c');
 		$builder->select("
@@ -32,6 +34,7 @@ class CajaModel extends Model
     SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo
 ", false);
 		$builder->where('c.id_concepto', '1');
+		$builder->where('c.id_moneda', $moneda);
 		$builder->where('c.estado', 0);
 
 		$query = $builder->get();
@@ -39,11 +42,12 @@ class CajaModel extends Model
 
 		return $result->saldo ?? 0;
 	}
-	public function ingresos()
+	public function ingresos($moneda)
 	{
 		$builder =  $this->db->table('caja c');
 		$builder->select("SUM(c.monto)  AS saldo");
 		$builder->where('c.id_concepto !=', '1');
+		$builder->where('c.id_moneda', $moneda);
 		$builder->where('c.movimiento', 'I');
 		$builder->where('c.estado', 0);
 
@@ -52,11 +56,12 @@ class CajaModel extends Model
 
 		return $result->saldo ?? 0;
 	}
-	public function egresos()
+	public function egresos($moneda)
 	{
 		$builder =  $this->db->table('caja c');
 		$builder->select("SUM(c.monto)  AS saldo");
 		$builder->where('c.id_concepto !=', '1');
+		$builder->where('c.id_moneda', $moneda);
 		$builder->where('c.movimiento', 'S');
 		$builder->where('c.estado', 0);
 
@@ -69,13 +74,14 @@ class CajaModel extends Model
 	{
 		$builder = $this->db->table('caja c');
 		$builder->select("
-    c.id_usuario, b.usuario,
+    c.id_usuario, b.usuario, c.id_moneda, e.simbolo,
     SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
     SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo_apertura
 ", false);
 		$builder->join('usuario b', 'c.id_usuario=b.id_usuario', 'inner');
+		$builder->join('moneda e', 'c.id_moneda=e.id_moneda', 'inner');
 		$builder->where('c.estado', 0);
-		$builder->groupBy('c.id_usuario');
+		$builder->groupBy('c.id_usuario, c.id_moneda');
 
 		$query = $builder->get();
 		return $query->getResult();

@@ -20,16 +20,23 @@ class Caja extends BaseController
     public function resumen()
     {
         $model = new CajaModel();
-        $apertura = $model->apertura();
-        $ingresos = $model->ingresos();
-        $egresos = $model->egresos();
+        $apertura = $model->apertura("PEN");
+        $apertura_dolares = $model->apertura("USD");
+        $ingresos = $model->ingresos("PEN");
+        $ingresos_dolares = $model->ingresos("USD");
+        $egresos = $model->egresos("PEN");
+        $egresos_dolares = $model->egresos("USD");
         $saldo_usuarios = $model->saldo_usuarios();
 
         $rpta = array(
             'apertura' => $apertura,
+            'apertura_dolares' => $apertura_dolares,
             'ingresos' => $ingresos,
+            'ingresos_dolares' => $ingresos_dolares,
             'egresos' => $egresos,
+            'egresos_dolares' => $egresos_dolares,
             'saldo' => $ingresos - $egresos,
+            'saldo_dolares' => $ingresos_dolares - $egresos_dolares,
             'saldo_usuarios' => $saldo_usuarios
         );
         return $this->response->setJSON($rpta);
