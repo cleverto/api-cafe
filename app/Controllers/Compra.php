@@ -19,8 +19,10 @@ class Compra extends BaseController
         $post = json_decode(file_get_contents('php://input'), true);
         $model = new CompraModel();
         $data = $model->lista($post);
+        
+		$total = $model->get_total($post["id"]);
 
-        $rpta = array('items' => $data);
+        $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
     public function buscar()
@@ -56,10 +58,15 @@ class Compra extends BaseController
     }
     public function modulo()
     {
-        $data = json_decode(file_get_contents('php://input'));
+        $data = json_decode(file_get_contents('php://input'), true);
         $model = new CompraModel();
-        $items = $model->modulo($data->id);
-        $rpta = array('rpta' => '1', 'items' => $items);
+        $items = $model->modulo($data["id"]);
+
+        $id_usuario = session()->get("data")["id_usuario"];
+        $total = $model->get_suma_total($data["id"], $id_usuario);
+
+
+        $rpta = array('rpta' => '1', 'items' => $items, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
 
@@ -231,7 +238,7 @@ class Compra extends BaseController
             $model_credito->set_Saldo(["id_credito" => $id_credito]);
 
             // elimina temp detalle
-            $model->eliminar_temp_by_id_modulo($post["idmodulo"]);
+            //$model->eliminar_temp_by_id_modulo($post["idmodulo"]);
 
 
             $rpta = array('rpta' => '1', 'msg' => "El registro no se puede modificar");

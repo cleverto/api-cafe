@@ -15,7 +15,71 @@ class CajaModel extends Model
 		$res = $query->getResultArray();
 		return $res;
 	}
+	public function lista_by_usuario($post)
+	{
+		$builder = $this->db->table('caja a');
+		$builder->where('a.id_usuario', $post["id_usuario"]);
+		$builder->orderBy('a.registro');
+		$query = $builder->get();
+		$res = $query->getResultArray();
+		return $res;
+	}
+	public function apertura()
+	{
+		$builder =  $this->db->table('caja c');
+		$builder->select("
+    SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
+    SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo
+", false);
+		$builder->where('c.id_concepto', '1');
+		$builder->where('c.estado', 0);
 
+		$query = $builder->get();
+		$result = $query->getRow();
+
+		return $result->saldo ?? 0;
+	}
+	public function ingresos()
+	{
+		$builder =  $this->db->table('caja c');
+		$builder->select("SUM(c.monto)  AS saldo");
+		$builder->where('c.id_concepto !=', '1');
+		$builder->where('c.movimiento', 'I');
+		$builder->where('c.estado', 0);
+
+		$query = $builder->get();
+		$result = $query->getRow();
+
+		return $result->saldo ?? 0;
+	}
+	public function egresos()
+	{
+		$builder =  $this->db->table('caja c');
+		$builder->select("SUM(c.monto)  AS saldo");
+		$builder->where('c.id_concepto !=', '1');
+		$builder->where('c.movimiento', 'S');
+		$builder->where('c.estado', 0);
+
+		$query = $builder->get();
+		$result = $query->getRow();
+
+		return $result->saldo ?? 0;
+	}
+	public function saldo_usuarios()
+	{
+		$builder = $this->db->table('caja c');
+		$builder->select("
+    c.id_usuario, b.usuario,
+    SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
+    SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo_apertura
+", false);
+		$builder->join('usuario b', 'c.id_usuario=b.id_usuario', 'inner');
+		$builder->where('c.estado', 0);
+		$builder->groupBy('c.id_usuario');
+
+		$query = $builder->get();
+		return $query->getResult();
+	}
 	public function lista_pago($id)
 	{
 		$builder = $this->db->table('caja_detalle a');

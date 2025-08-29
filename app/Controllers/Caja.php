@@ -17,7 +17,32 @@ class Caja extends BaseController
         $rpta = array('items' => $data);
         return $this->response->setJSON($rpta);
     }
+    public function resumen()
+    {
+        $model = new CajaModel();
+        $apertura = $model->apertura();
+        $ingresos = $model->ingresos();
+        $egresos = $model->egresos();
+        $saldo_usuarios = $model->saldo_usuarios();
 
+        $rpta = array(
+            'apertura' => $apertura,
+            'ingresos' => $ingresos,
+            'egresos' => $egresos,
+            'saldo' => $ingresos - $egresos,
+            'saldo_usuarios' => $saldo_usuarios
+        );
+        return $this->response->setJSON($rpta);
+    }
+    public function lista_by_usuario()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new CajaModel();
+        $data = $model->lista_by_usuario($post);
+
+        $rpta = array('items' => $data);
+        return $this->response->setJSON($rpta);
+    }
     public function modulo()
     {
         $data = json_decode(file_get_contents('php://input'));

@@ -13,7 +13,7 @@ class CompraModel extends Model
 
 
 		$datos = array('id_modulo' => $post["id"]);
-		 $this->db->table('compra_temp')->delete($datos);
+		$this->db->table('compra_temp')->delete($datos);
 
 		$id_usuario = session()->get("data")["id_usuario"];
 		$this->db->query("
@@ -29,13 +29,14 @@ class CompraModel extends Model
 
 
 
-  		$builder = $this->db->table('compra_temp a');
+		$builder = $this->db->table('compra_temp a');
 		$builder->select('a.*');
 		$builder->select('b.producto, b.id_categoria');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
 		$builder->where('a.id_modulo', $post["id"]);
 		$query = $builder->get();
 		$data =  $query->getResultArray();
+
 
 
 		return $data;
@@ -70,7 +71,7 @@ class CompraModel extends Model
 		$builder->select('a.*');
 		$builder->select('b.producto, b.id_categoria');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
-		$builder->where('a.id_modulo', $id);
+		$builder->where("(a.id_modulo IS NULL OR a.id_modulo = '')");
 		$builder->where('a.id_usuario', $id_usuario);
 
 		$query = $builder->get();
@@ -96,12 +97,22 @@ class CompraModel extends Model
 		$query = $builder->get();
 		return $query->getRowArray();
 	}
+	public function get_total($id)
+	{
+		$builder = $this->db->table('compra a');
+		$builder->selectSum('total');
+		$builder->where('id_compra', $id);
+		$query = $builder->get()->getRow();
 
+		return $query->total ?? 0;;
+	}
 	public function get_suma_total($id, $id_usuario)
 	{
 		$builder = $this->db->table('compra_temp a');
 		$builder->selectSum('total');
-		$builder->where('id_modulo', $id);
+		if (!empty($id)) {
+			$builder->where('a.id_modulo', $id);
+		}
 		$builder->where('id_usuario', $id_usuario);
 		$query = $builder->get()->getRow();
 
@@ -132,7 +143,6 @@ class CompraModel extends Model
 		$builder = $this->db->table('compra_temp');
 		$builder->insert($data);
 		return $this->db->insertID();
-
 	}
 	public function guardar_credito_compra($id, $id_credito)
 	{
@@ -176,7 +186,7 @@ class CompraModel extends Model
     ? AS id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
     descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
   FROM compra_temp
-  WHERE id_usuario = ?", [$id, $datos["id_usuario"]]);
+  WHERE id_modulo = ? AND id_usuario = ?", [$id, $id, $datos["id_usuario"]]);
 
 		return $t;
 	}

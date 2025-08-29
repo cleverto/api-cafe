@@ -51,6 +51,31 @@ class Funciones extends BaseController
         $rpta = array('rpta' => '1', 'items' => $data);
         return $this->response->setJSON($rpta);
     }
+    public function get_solo_nombre()
+    {
+        $post = json_decode(file_get_contents('php://input'));
+
+        if ($post->tipo == "dni") {
+            $model = new ProveedorModel();
+            $row = $model->get_by_dni($post->nro);
+            if (isset($row)) {
+                $data = array(
+                    'id_proveedor' => $row->id_proveedor,
+                    'nombrecompleto' => $row->proveedor,
+                );
+                $rpta = array('rpta' => '1', 'items' => $data);
+                return $this->response->setJSON($rpta);
+            }
+        }
+        $model = new FuncionesModel();
+        $data = $model->get_dni_externo($post);
+        if (empty($data)) {
+            $data = $model->get_dni_sunat($post);
+        }
+
+        $rpta = array('rpta' => '1', 'items' => $data);
+        return $this->response->setJSON($rpta);
+    }
     public function get_dni_externo()
     {
         $data = json_decode(file_get_contents('php://input'));

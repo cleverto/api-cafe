@@ -38,6 +38,7 @@ class Proveedor extends BaseController
         $datos = array(
             'id_ubigeo' => $data["id_ubigeo"],
             'id_identidad' => "1",
+            'tipo' => $data["tipo"],
             'dni' => $data["dni"],
             'proveedor' => $data["proveedor"],
             'direccion' => $data["direccion"],
