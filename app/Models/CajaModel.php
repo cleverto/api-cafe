@@ -18,8 +18,9 @@ class CajaModel extends Model
 	public function lista_by_usuario($post)
 	{
 		$builder = $this->db->table('caja a');
-		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor');
-		$builder->join('moneda c', 'a.id_moneda=c.id_moneda');
+		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor', 'inner');
+		$builder->join('moneda c', 'a.id_moneda=c.id_moneda', 'inner');
+		$builder->join('concepto f', 'a.id_concepto=f.id_concepto', 'inner');
 		$builder->where('a.id_usuario', $post["id_usuario"]);
 		$builder->orderBy('a.registro');
 		$query = $builder->get();
@@ -74,12 +75,13 @@ class CajaModel extends Model
 	{
 		$builder = $this->db->table('caja c');
 		$builder->select("
-    c.id_usuario, b.usuario, c.id_moneda, e.simbolo,
+    c.id_usuario, b.usuario, c.id_moneda, 
     SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
     SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo_apertura
 ", false);
 		$builder->join('usuario b', 'c.id_usuario=b.id_usuario', 'inner');
 		$builder->join('moneda e', 'c.id_moneda=e.id_moneda', 'inner');
+		
 		$builder->where('c.estado', 0);
 		$builder->groupBy('c.id_usuario, c.id_moneda');
 
