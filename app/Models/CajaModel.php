@@ -18,10 +18,15 @@ class CajaModel extends Model
 	public function lista_by_usuario($post)
 	{
 		$builder = $this->db->table('caja a');
+		$builder->select("a.*, b.*, c.*, 
+    (CASE 
+        WHEN d.id_caja IS NULL THEN 1 
+        ELSE 0 
+    END) AS es_caja", false);
 		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor');
 		$builder->join('moneda c', 'a.id_moneda=c.id_moneda');
+		$builder->join('caja_credito d', 'a.id_caja=d.id_caja', 'left');
 		$builder->where('a.id_usuario', $post["id_usuario"]);
-		$builder->orderBy('a.registro');
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
@@ -127,8 +132,8 @@ class CajaModel extends Model
 
 	public function eliminar($data)
 	{
-		$datos = array('id_producto' => $data->id);
-		$query = $this->db->table('producto')->delete($datos);
+		$datos = array('id_caja' => $data["id"]);
+		$query = $this->db->table('caja')->delete($datos);
 
 		return $query;
 	}
