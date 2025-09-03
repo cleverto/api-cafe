@@ -18,7 +18,7 @@ class CajaModel extends Model
 	public function lista_by_usuario($post)
 	{
 		$builder = $this->db->table('caja a');
-		$builder->select("a.*, b.*, c.*, 
+		$builder->select("a.*, b.*, c.*, e.concepto,
     (CASE 
         WHEN d.id_caja IS NULL THEN 1 
         ELSE 0 
@@ -26,6 +26,7 @@ class CajaModel extends Model
 		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor');
 		$builder->join('moneda c', 'a.id_moneda=c.id_moneda');
 		$builder->join('caja_credito d', 'a.id_caja=d.id_caja', 'left');
+		$builder->join('concepto e', 'a.id_concepto=e.id_concepto', 'inner');
 		$builder->where('a.id_usuario', $post["id_usuario"]);
 		$query = $builder->get();
 		$res = $query->getResultArray();
@@ -79,12 +80,13 @@ class CajaModel extends Model
 	{
 		$builder = $this->db->table('caja c');
 		$builder->select("
-    c.id_usuario, b.usuario, c.id_moneda, e.simbolo,
+    c.id_usuario, b.usuario, c.id_moneda, 
     SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
     SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo_apertura
 ", false);
 		$builder->join('usuario b', 'c.id_usuario=b.id_usuario', 'inner');
 		$builder->join('moneda e', 'c.id_moneda=e.id_moneda', 'inner');
+		
 		$builder->where('c.estado', 0);
 		$builder->groupBy('c.id_usuario, c.id_moneda');
 
@@ -99,19 +101,20 @@ class CajaModel extends Model
 		$builder->orderBy('a.fecha desc');
 		$query = $builder->get();
 
-		$res = $query->getResultArray();
-		return $res;
+		return $query->getResultArray();
 	}
 
 	public function modulo($id)
 	{
-		$builder = $this->db->table('producto a');
-		$builder->where('a.id_producto', $id);
+		$builder = $this->db->table('caja a');
+		$builder->join('concepto b', 'a.id_concepto=b.id_concepto', 'inner');
+		$builder->join('proveedor c', 'a.id_proveedor=c.id_proveedor', 'inner');
+		$builder->join('moneda d', 'a.id_moneda=d.id_moneda', 'inner');
+		$builder->where('a.id_caja', $id);
 
 		$query = $builder->get();
-		$data = $query->getRowArray();
+		return $query->getRowArray();
 
-		return $data;
 	}
 	public function guardar($data)
 	{
@@ -123,8 +126,8 @@ class CajaModel extends Model
 	}
 	public function modificar($id, $datos)
 	{
-		$db = $this->db->table('producto');
-		$db->where('id_producto', $id);
+		$db = $this->db->table('caja');
+		$db->where('id_caja', $id);
 		$db->update($datos);
 
 		return $this->db->affectedRows();
@@ -133,8 +136,7 @@ class CajaModel extends Model
 	public function eliminar($data)
 	{
 		$datos = array('id_caja' => $data["id"]);
-		$query = $this->db->table('caja')->delete($datos);
+		return $this->db->table('caja')->delete($datos);
 
-		return $query;
 	}
 }

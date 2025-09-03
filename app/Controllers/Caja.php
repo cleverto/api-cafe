@@ -68,7 +68,7 @@ class Caja extends BaseController
             'id_usuario' => session()->get("data")["id_usuario"],
             'id_concepto' => $data["id_concepto"],
             'id_tipo_caja' => $data["id_tipo_caja"],
-            'movimiento' => $data["movimiento"],            
+            'movimiento' => $data["movimiento"],
             'fecha' => $data["fecha"],
             'registro' =>  date("Y-m-d H:i:s"),
             'estado' => "0",
@@ -90,7 +90,10 @@ class Caja extends BaseController
             $data = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {
             $id = $model->modificar($data["idmodulo"], $datos);
-            $data = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
+
+            $modulo = $model->modulo($data["idmodulo"]);
+
+            $data = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id, 'modulo' => $modulo);
         }
 
         return $this->response->setJSON($data);
