@@ -14,20 +14,21 @@ class Funciones extends BaseController
     {
         $post = json_decode(file_get_contents('php://input'));
 
-        if ($post->tipo == "dni") {
-            $model = new ProveedorModel();
-            $row = $model->get_by_dni($post->nro);
-            if (isset($row)) {
-                $data = array(
-                    'id_proveedor' => $row->id_proveedor,
-                    'nombrecompleto' => $row->proveedor,
-                );
-                $rpta = array('rpta' => '1', 'items' => $data);
-                return $this->response->setJSON($rpta);
-            }
+
+        $model = new ProveedorModel();
+        $row = $model->get_by_dni($post->nro);
+        if (isset($row)) {
+            $data = array(
+                'id_proveedor' => $row->id_proveedor,
+                'nombrecompleto' => $row->proveedor,
+            );
+            $rpta = array('rpta' => '1', 'items' => $data);
+            return $this->response->setJSON($rpta);
         }
+
         $model = new FuncionesModel();
         $data = $model->get_dni_externo($post);
+
         if (empty($data)) {
             $data = $model->get_dni_sunat($post);
         }
@@ -35,11 +36,11 @@ class Funciones extends BaseController
         if (!empty($data)) {
             $datos = array(
                 'id_ubigeo' => "060801",
-                'id_identidad' => "1",
-                'dni' => $post->nro,
+                'id_identidad' => $post->tipo == "dni"  ? "1" : "6",
+                'nro' => $post->nro,
                 'proveedor' => $data["nombrecompleto"],
                 'tipo' => "0",
-                'direccion' => "",
+                'direccion' => $data["direccion"],
                 'telefono' => "",
             );
             $model_proveedor = new ProveedorModel();
@@ -55,20 +56,24 @@ class Funciones extends BaseController
     {
         $post = json_decode(file_get_contents('php://input'));
 
-        if ($post->tipo == "dni") {
-            $model = new ProveedorModel();
-            $row = $model->get_by_dni($post->nro);
-            if (isset($row)) {
-                $data = array(
-                    'id_proveedor' => $row->id_proveedor,
-                    'nombrecompleto' => $row->proveedor,
-                );
-                $rpta = array('rpta' => '1', 'items' => $data);
-                return $this->response->setJSON($rpta);
-            }
+
+        $model = new ProveedorModel();
+        $row = $model->get_by_dni($post->nro);
+        if (isset($row)) {
+            $data = array(
+                'id_proveedor' => $row->id_proveedor,
+                'nombrecompleto' => $row->proveedor,
+            );
+            $rpta = array('rpta' => '1', 'items' => $data);
+            return $this->response->setJSON($rpta);
         }
+
+
+
         $model = new FuncionesModel();
         $data = $model->get_dni_externo($post);
+
+
         if (empty($data)) {
             $data = $model->get_dni_sunat($post);
         }

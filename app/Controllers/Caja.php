@@ -63,13 +63,18 @@ class Caja extends BaseController
         $datos = array(
             'id_empresa' => "1",
             'id_sucursal' => "1",
+            'id_proveedor' => "1",
+            'id_moneda' => $data["id_moneda"],
             'id_usuario' => session()->get("data")["id_usuario"],
             'id_concepto' => $data["id_concepto"],
             'id_tipo_caja' => $data["id_tipo_caja"],
-            'id_proveedor' => $data["id_proveedor"],
-            'fecha' => $data["fecha"],
             'movimiento' => $data["movimiento"],
+            'fecha' => $data["fecha"],
+            'registro' =>  date("Y-m-d H:i:s"),
+            'estado' => "0",
+            'referencia' => "",
             'observaciones' => $data["observaciones"],
+            'monto' => $data["monto"],
         );
 
         return $datos;
@@ -85,7 +90,10 @@ class Caja extends BaseController
             $data = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {
             $id = $model->modificar($data["idmodulo"], $datos);
-            $data = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id);
+
+            $modulo = $model->modulo($data["idmodulo"]);
+
+            $data = array('rpta' => '1', 'msg' => "Modificado correctamente", 'id' => $id, 'modulo' => $modulo);
         }
 
         return $this->response->setJSON($data);
@@ -93,7 +101,7 @@ class Caja extends BaseController
 
     public function eliminar()
     {
-        $data = json_decode(file_get_contents('php://input'));
+        $data = json_decode(file_get_contents('php://input'), true);
         $model = new CajaModel();
         $t = $model->eliminar($data);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");

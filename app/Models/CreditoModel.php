@@ -121,7 +121,7 @@ class CreditoModel extends Model
 	{
 		$data = array(
 			"id_caja" => $id_caja,
-			"id" => $id,
+			"id_detalle" => $id,
 		);
 		$builder = $this->db->table('caja_credito');
 		$builder->insert($data);
@@ -142,14 +142,14 @@ class CreditoModel extends Model
 		// 1. Buscar el id_caja relacionado
 		$row = $this->db->table('caja_credito')
 			->select('id_caja')
-			->where('id', $data["id"])
+			->where('id_detalle', $data["id"])
 			->get()
 			->getRow();
 
 		$id_credito = "";
 
 		// 3. Eliminar el registro en caja_credito
-		$this->db->table('caja_credito')->where('id', $data["id"])->delete();
+		$this->db->table('caja_credito')->where('id_detalle', $data["id"])->delete();
 
 		if ($row) {
 			$id_caja = $row->id_caja;
@@ -159,7 +159,7 @@ class CreditoModel extends Model
 		}
 
 		// 2. Eliminar primero los detalles relacionados
-		$this->db->table('credito_detalle')->where('id', $data["id"])->delete();
+		$this->db->table('credito_detalle')->where('id_detalle', $data["id"])->delete();
 
 		$this->set_saldo(["id_credito" => $data["idmodulo"]]);
 

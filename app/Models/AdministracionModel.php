@@ -10,6 +10,9 @@ class AdministracionModel extends Model
 	{
 		$builder = $this->db->table($data->modulo);
 		$builder->select("id_" . $data->modulo . " as id, " . $data->modulo . " as descripcion");
+		if ($data->modulo == "tipo_comprobante") {
+			$builder->where("modulo", $data->opcion);
+		}
 		$builder->orderBy($data->modulo);
 		$query = $builder->get();
 

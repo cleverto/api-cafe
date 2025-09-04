@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use PhpParser\Internal\PrintableNewAnonClassNode;
 
 class FuncionesModel extends Model
 {
@@ -52,6 +53,7 @@ class FuncionesModel extends Model
                'paterno' => $apellidoPaterno,
                'materno' => $apellidoMaterno,
                'nombrecompleto' => $nombre,
+               'direccion' => "",
             );
             return $data;
          } else {
@@ -63,12 +65,13 @@ class FuncionesModel extends Model
    }
    public function get_dni_externo($data)
    {
+
       //https://dniruc.apisperu.com/api/v1/dni/12345678?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6Im1hY2V2YTQyOEBnbWFpbC5jb20ifQ.F3tbDYl0PiXqSCKPpifrF0iEk5a86QPNoJcRsMel2Bc
       $token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6Im1hY2V2YTQyOEBnbWFpbC5jb20ifQ.F3tbDYl0PiXqSCKPpifrF0iEk5a86QPNoJcRsMel2Bc";
       $link = 'https://dniruc.apisperu.com/api/v1/' . $data->tipo . '/';
       $nro = $data->nro;
       $url = $link . $nro . "?token=" . $token;
-      //echo $url;
+
       $ch = curl_init();
       curl_setopt($ch, CURLOPT_URL, $url);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -80,31 +83,50 @@ class FuncionesModel extends Model
          return $data;
       } else {
          $datos = json_decode($json, true);
+
+
          if (json_last_error() !== JSON_ERROR_NONE) {
             // Manejar el error de decodificación JSON
             $data = [];
             return $data;
          } elseif (empty($datos['success']) || $datos['success'] === false) {
             $data = [];
+
             return $data;
          } else {
+
+
             $datos = json_decode($json, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
+            // if (json_last_error() !== JSON_ERROR_NONE) {
+            // }
+            // $datos = json_decode($json, true);
+            $res = [];
+            if ($data->tipo === "dni") {
+
+               $nombres = $datos["nombres"];
+               $paterno = $datos["apellidoPaterno"];
+               $materno = $datos["apellidoMaterno"];
+
+               $res = array(
+                  'origen' => "0",
+                  'nombres' => $nombres,
+                  'paterno' => $paterno,
+                  'materno' => $materno,
+                  'direccion' => "",
+                  'nombrecompleto' => $nombres . " " . $paterno . " " . $materno,
+               );
+               return $res;
+            } else {
+               $nombres = $datos["razonSocial"];
+               $direccion = $datos["direccion"];
+
+               $res = array(
+                  'origen' => "0",
+                  'nombrecompleto' => $nombres,
+                  'direccion' => isset($direccion) ? $direccion : "",
+               );
+               return $res;
             }
-            $datos = json_decode($json, true);
-            $nombres = $datos["nombres"];
-            $paterno = $datos["apellidoPaterno"];
-            $materno = $datos["apellidoMaterno"];
-
-            $data = array(
-               'origen' => "0",
-               'nombres' => $nombres,
-               'paterno' => $paterno,
-               'materno' => $materno,
-               'nombrecompleto' => $nombres . " " . $paterno . " " . $materno,
-            );
-
-            return $data;
          }
       }
    }

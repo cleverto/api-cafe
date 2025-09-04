@@ -17,6 +17,14 @@ class Producto extends BaseController
         $rpta = array('items' => $data);
         return $this->response->setJSON($rpta);
     }
+    public function lista_stock()
+    {
+        $model = new ProductoModel();
+        $data = $model->lista_stock();
+
+        $rpta = array('items' => $data);
+        return $this->response->setJSON($rpta);
+    }
     public function modulo()
     {
         $data = json_decode(file_get_contents('php://input'));
@@ -29,6 +37,9 @@ class Producto extends BaseController
     private function valores($data)
     {
         $datos = array(
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_categoria' => $data["id_categoria"],
             'producto' => $data["producto"],
         );
 

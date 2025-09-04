@@ -18,11 +18,16 @@ class CajaModel extends Model
 	public function lista_by_usuario($post)
 	{
 		$builder = $this->db->table('caja a');
-		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor', 'inner');
-		$builder->join('moneda c', 'a.id_moneda=c.id_moneda', 'inner');
-		$builder->join('concepto f', 'a.id_concepto=f.id_concepto', 'inner');
+		$builder->select("a.*, b.*, c.*, e.concepto,
+    (CASE 
+        WHEN d.id_caja IS NULL THEN 1 
+        ELSE 0 
+    END) AS es_caja", false);
+		$builder->join('proveedor b', 'a.id_proveedor=b.id_proveedor');
+		$builder->join('moneda c', 'a.id_moneda=c.id_moneda');
+		$builder->join('caja_credito d', 'a.id_caja=d.id_caja', 'left');
+		$builder->join('concepto e', 'a.id_concepto=e.id_concepto', 'inner');
 		$builder->where('a.id_usuario', $post["id_usuario"]);
-		$builder->orderBy('a.registro');
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
@@ -96,19 +101,20 @@ class CajaModel extends Model
 		$builder->orderBy('a.fecha desc');
 		$query = $builder->get();
 
-		$res = $query->getResultArray();
-		return $res;
+		return $query->getResultArray();
 	}
 
 	public function modulo($id)
 	{
-		$builder = $this->db->table('producto a');
-		$builder->where('a.id_producto', $id);
+		$builder = $this->db->table('caja a');
+		$builder->join('concepto b', 'a.id_concepto=b.id_concepto', 'inner');
+		$builder->join('proveedor c', 'a.id_proveedor=c.id_proveedor', 'inner');
+		$builder->join('moneda d', 'a.id_moneda=d.id_moneda', 'inner');
+		$builder->where('a.id_caja', $id);
 
 		$query = $builder->get();
-		$data = $query->getRowArray();
+		return $query->getRowArray();
 
-		return $data;
 	}
 	public function guardar($data)
 	{
@@ -120,8 +126,8 @@ class CajaModel extends Model
 	}
 	public function modificar($id, $datos)
 	{
-		$db = $this->db->table('producto');
-		$db->where('id_producto', $id);
+		$db = $this->db->table('caja');
+		$db->where('id_caja', $id);
 		$db->update($datos);
 
 		return $this->db->affectedRows();
@@ -129,9 +135,8 @@ class CajaModel extends Model
 
 	public function eliminar($data)
 	{
-		$datos = array('id_producto' => $data->id);
-		$query = $this->db->table('producto')->delete($datos);
+		$datos = array('id_caja' => $data["id"]);
+		return $this->db->table('caja')->delete($datos);
 
-		return $query;
 	}
 }

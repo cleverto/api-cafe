@@ -34,8 +34,8 @@ class ProveedorModel extends Model
 	public function get_by_dni($id)
 	{
 		$builder = $this->db->table('proveedor a');
-		$builder->select('a.proveedor, a. id_proveedor');
-		$builder->where('a.dni', $id);
+		$builder->select('a.proveedor, a.id_proveedor');
+		$builder->where('a.nro', $id);
 
 		$query = $builder->get();
 		$data = $query->getRow(0);
@@ -53,13 +53,13 @@ class ProveedorModel extends Model
 	public function existe_dni($data)
 	{
 		$builder = $this->db->table('proveedor');
-		$builder->where('dni', $data["dni"]);
+		$builder->where('nro', $data["nro"]);
 		return $builder->countAllResults();
 	}
 	public function existe_dni_modificar($data)
 	{
 		$builder = $this->db->table('proveedor');
-		$builder->where('dni', $data["dni"]);
+		$builder->where('nro', $data["nro"]);
 		$builder->where('id_proveedor !=', $data["idmodulo"]);
 		return $builder->countAllResults();
 	}
