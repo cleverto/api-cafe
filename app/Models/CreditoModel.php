@@ -69,7 +69,7 @@ class CreditoModel extends Model
 			$builder = $this->db->table('compra a');
 			$builder->select('a.*');
 			$builder->select('b.proveedor, c.simbolo');
-			$builder->select('d.id_credito, e.saldo');
+			$builder->select('d.id_credito, e.saldo, a.id_moneda');
 			// 	$builder->select("CASE 
 			//     WHEN a.id_moneda = 'USD' THEN ROUND(a.total * d.tipo_cambio,2)
 			//     ELSE a.total
@@ -146,7 +146,7 @@ class CreditoModel extends Model
 			->get()
 			->getRow();
 
-		$id_credito = "";
+
 
 		// 3. Eliminar el registro en caja_credito
 		$this->db->table('caja_credito')->where('id_detalle', $data["id"])->delete();

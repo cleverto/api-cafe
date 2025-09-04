@@ -56,7 +56,7 @@ class Credito extends BaseController
     {
         $datos = array(
             'id_credito' => $data["idmodulo"],
-            'id_tipo_caja' => $data["id_tipo_caja"],
+            'id_tipo_caja' => $data["id_tipo_caja"],            
             'fecha' => $data["fecha"],
             'monto' => $data["monto"],
             'referencia' => $data["referencia"],
@@ -66,7 +66,6 @@ class Credito extends BaseController
     }
     private function valores_caja($data)
     {
-
         $datos = array(
             'id_empresa' => $data["id_empresa"],
             'id_sucursal' => $data["id_sucursal"],
@@ -74,9 +73,14 @@ class Credito extends BaseController
             'id_concepto' => "3",
             'id_tipo_caja' => $data["id_tipo_caja"],
             'id_proveedor' => $data["id_proveedor"],
-            'fecha' => date("Y-m-d H:i:s", strtotime($data["fecha"])),
-            'movimiento' => "0",
+            'id_moneda' => $data["id_moneda"],
+            'fecha' => date("Y-m-d H:i:s", strtotime($data["fecha"] . " " . date("H:i:s"))),
+            'registro' => date('Y-m-d H:i:s'),
+            'movimiento' => "I",
             'monto' => $data["monto"],
+            
+            'estado' => "0",
+            'referencia' => "",
             'observaciones' => $data["referencia"],
         );
 
@@ -90,6 +94,8 @@ class Credito extends BaseController
         $model = new CreditoModel();
         if ($data["operacion"] == "0") {
             $id = $model->guardar($datos);
+
+
 
             $data = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
         } else {
@@ -127,7 +133,7 @@ class Credito extends BaseController
 
         // para caja
         $model_caja = new CajaModel();
-        $datos_caja = $this->valores_caja($post);
+        $datos_caja = $this->valores_caja($post );
         $id_caja = $model_caja->guardar($datos_caja);
 
         // para caja credito
@@ -151,7 +157,7 @@ class Credito extends BaseController
             //enviar el saldo
             $saldo = $model->get_saldo($data["idmodulo"]);
 
-            $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente", "saldo"=>$saldo);
+            $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente", "saldo" => $saldo);
         }
         return $this->response->setJSON($rpta);
     }
