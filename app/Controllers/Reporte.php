@@ -4,108 +4,128 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
-use App\Models\DesignacionModel;
-use App\Models\RotacionModel;
-use App\Models\TrabajadorVinculoDocenteModel;
-use App\Models\TrabajadorModel;
+use App\Models\CompraModel;
+
 
 class Reporte extends BaseController
 {
 
-    public function trabajador()
+    public function compras()
     {
-
-        $id = !empty($_GET) ? $_GET["id"] : "";
-
-        $model = new TrabajadorModel();
-        $vista["lista"] = $model->modulo($id);
-        $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
-        $vista["lista_cuenta"] = $model->modulo_cuenta($id);
-        $vista["lista_familiar"] = $model->modulo_familiar($id);
-        $vista["lista_hijos"] = $model->modulo_hijos($id);
-        $vista["lista_pension"] = $model->modulo_pension($id);
-        $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+        $desde = !empty($_GET) ? $_GET["desde"] : "";
+        $hasta = !empty($_GET) ? $_GET["hasta"] : "";
 
 
-        if ($vista["lista"]["id_tipo_trabajador"] == "1") {
-            $model = new TrabajadorVinculoDocenteModel();
-            $vista["lista_vinculo"] = $model->modulo($id);
-        }
+        $datos = array(
+            "desde" => $desde,
+            "hasta" => $hasta
+        );
 
-        return view('trabajador', $vista);
+        $model = new CompraModel();
+        $vista["lista"] = $model->filtro($datos);
+        $vista["filtro"] = $datos;
+
+        return view('Compras', $vista);
     }
-    public function escalafonario10()
-    {
 
-        $id = !empty($_GET) ? $_GET["id"] : "";
 
-        $model = new TrabajadorModel();
-        $vista["lista"] = $model->modulo($id);
-        $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
-        $vista["lista_vinculo"] = $model->modulo_vinculo($id);
 
-        if ($vista["lista"]["id_tipo_trabajador"] == "1") {
-            $model = new TrabajadorVinculoDocenteModel();
-            $vista["lista_vinculo"] = $model->modulo($id);
-        }
-        $model = new DesignacionModel();
-        $vista["lista_designacion"] = $model->lista_by_trabajador($id);
-        $model = new RotacionModel();
-        $vista["lista_rotacion"] = $model->lista_by_trabajador($id);
-        return view('escalafonario10', $vista);
-    }
-    public function escalafonario13()
-    {
 
-        $id = !empty($_GET) ? $_GET["id"] : "";
 
-        $model = new TrabajadorModel();
-        $vista["lista"] = $model->modulo($id);
-        $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
-        $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+    // public function trabajador()
+    // {
 
-        if ($vista["lista"]["id_tipo_trabajador"] == "1") {
-            $model = new TrabajadorVinculoDocenteModel();
-            $vista["lista_vinculo"] = $model->modulo($id);
-        }
-        $model = new DesignacionModel();
-        $vista["lista_designacion"] = $model->lista_by_trabajador($id);
-        return view('escalafonario13', $vista);
-    }
-    public function escalafonario14()
-    {
+    //     $id = !empty($_GET) ? $_GET["id"] : "";
 
-        $id = !empty($_GET) ? $_GET["id"] : "";
+    //     $model = new TrabajadorModel();
+    //     $vista["lista"] = $model->modulo($id);
+    //     $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
+    //     $vista["lista_cuenta"] = $model->modulo_cuenta($id);
+    //     $vista["lista_familiar"] = $model->modulo_familiar($id);
+    //     $vista["lista_hijos"] = $model->modulo_hijos($id);
+    //     $vista["lista_pension"] = $model->modulo_pension($id);
+    //     $vista["lista_vinculo"] = $model->modulo_vinculo($id);
 
-        $model = new TrabajadorModel();
-        $vista["lista"] = $model->modulo($id);
-        $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
-        $vista["lista_vinculo"] = $model->modulo_vinculo($id);
 
-        if ($vista["lista"]["id_tipo_trabajador"] == "1") {
-            $model = new TrabajadorVinculoDocenteModel();
-            $vista["lista_vinculo"] = $model->modulo($id);
-        }
-        $model = new DesignacionModel();
-        $vista["lista_designacion"] = $model->lista_by_trabajador($id);
-        return view('escalafonario14', $vista);
-    }
-    public function escalafonario15()
-    {
+    //     if ($vista["lista"]["id_tipo_trabajador"] == "1") {
+    //         $model = new TrabajadorVinculoDocenteModel();
+    //         $vista["lista_vinculo"] = $model->modulo($id);
+    //     }
 
-        $id = !empty($_GET) ? $_GET["id"] : "";
+    //     return view('trabajador', $vista);
+    // }
+    // public function escalafonario10()
+    // {
 
-        $model = new TrabajadorModel();
-        $vista["lista"] = $model->modulo($id);
-        $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
-        $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+    //     $id = !empty($_GET) ? $_GET["id"] : "";
 
-        if ($vista["lista"]["id_tipo_trabajador"] == "1") {
-            $model = new TrabajadorVinculoDocenteModel();
-            $vista["lista_vinculo"] = $model->modulo($id);
-        }
-        $model = new DesignacionModel();
-        $vista["lista_designacion"] = $model->lista_by_trabajador($id);
-        return view('escalafonario14', $vista);
-    }
+    //     $model = new TrabajadorModel();
+    //     $vista["lista"] = $model->modulo($id);
+    //     $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
+    //     $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+
+    //     if ($vista["lista"]["id_tipo_trabajador"] == "1") {
+    //         $model = new TrabajadorVinculoDocenteModel();
+    //         $vista["lista_vinculo"] = $model->modulo($id);
+    //     }
+    //     $model = new DesignacionModel();
+    //     $vista["lista_designacion"] = $model->lista_by_trabajador($id);
+    //     $model = new RotacionModel();
+    //     $vista["lista_rotacion"] = $model->lista_by_trabajador($id);
+    //     return view('escalafonario10', $vista);
+    // }
+    // public function escalafonario13()
+    // {
+
+    //     $id = !empty($_GET) ? $_GET["id"] : "";
+
+    //     $model = new TrabajadorModel();
+    //     $vista["lista"] = $model->modulo($id);
+    //     $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
+    //     $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+
+    //     if ($vista["lista"]["id_tipo_trabajador"] == "1") {
+    //         $model = new TrabajadorVinculoDocenteModel();
+    //         $vista["lista_vinculo"] = $model->modulo($id);
+    //     }
+    //     $model = new DesignacionModel();
+    //     $vista["lista_designacion"] = $model->lista_by_trabajador($id);
+    //     return view('escalafonario13', $vista);
+    // }
+    // public function escalafonario14()
+    // {
+
+    //     $id = !empty($_GET) ? $_GET["id"] : "";
+
+    //     $model = new TrabajadorModel();
+    //     $vista["lista"] = $model->modulo($id);
+    //     $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
+    //     $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+
+    //     if ($vista["lista"]["id_tipo_trabajador"] == "1") {
+    //         $model = new TrabajadorVinculoDocenteModel();
+    //         $vista["lista_vinculo"] = $model->modulo($id);
+    //     }
+    //     $model = new DesignacionModel();
+    //     $vista["lista_designacion"] = $model->lista_by_trabajador($id);
+    //     return view('escalafonario14', $vista);
+    // }
+    // public function escalafonario15()
+    // {
+
+    //     $id = !empty($_GET) ? $_GET["id"] : "";
+
+    //     $model = new TrabajadorModel();
+    //     $vista["lista"] = $model->modulo($id);
+    //     $vista["lista_academica"] = $model->modulo_academica_by_trabajador($id);
+    //     $vista["lista_vinculo"] = $model->modulo_vinculo($id);
+
+    //     if ($vista["lista"]["id_tipo_trabajador"] == "1") {
+    //         $model = new TrabajadorVinculoDocenteModel();
+    //         $vista["lista_vinculo"] = $model->modulo($id);
+    //     }
+    //     $model = new DesignacionModel();
+    //     $vista["lista_designacion"] = $model->lista_by_trabajador($id);
+    //     return view('escalafonario14', $vista);
+    // }
 }

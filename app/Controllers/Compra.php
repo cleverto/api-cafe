@@ -4,6 +4,7 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use App\Models\AlmacenModel;
 use App\Models\CompraModel;
 use App\Models\CreditoModel;
 use App\Models\FuncionesModel;
@@ -19,8 +20,8 @@ class Compra extends BaseController
         $post = json_decode(file_get_contents('php://input'), true);
         $model = new CompraModel();
         $data = $model->lista($post);
-        
-		$total = $model->get_total($post["id"]);
+
+        $total = $model->get_total($post["id"]);
 
         $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
@@ -77,7 +78,8 @@ class Compra extends BaseController
 
         $id_usuario = session()->get("data")["id_usuario"];
 
-        $son = letras("123");
+        //$son = letras("123");
+        $son = "";
         $datos = array(
             'id_empresa' => "1",
             'id_sucursal' => "1",
@@ -119,6 +121,9 @@ class Compra extends BaseController
         $id_usuario = session()->get("data")["id_usuario"];
         $datos = array(
             'id_modulo' => $data['idmodulo'],
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_almacen' => "1",
             'id_usuario' => $id_usuario,
             'id_producto' => $data['id_producto'],
             'muestra' => $data['muestra'],
@@ -162,18 +167,33 @@ class Compra extends BaseController
 
         return $datos;
     }
-
-    private function validar_modificar($datos)
+    private function valores_kardex($datos)
     {
-        $errors = array();
-        $model = new CompraModel();
-
-        $t = $model->existe_dni_modificar($datos);
-        if ($t > 0) {
-            $errors[] =  "Este numero de dni ya esta registrado";
-            return $errors;
-        }
+        $data = array(
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_almacen' => "1",
+            'id_usuario' => $datos["id_usuario"],
+            'id_tipo_comprobante' => $datos["id_tipo_comprobante"],
+            'operacion' => "S",
+            'nro_comprobante' => $datos["referencia"],
+            'motivo' => "Compra",
+            'fecha' => $datos["fecha"],
+        );
+        return $data;
     }
+
+    // private function validar_modificar($datos)
+    // {
+    //     $errors = array();
+    //     $model = new CompraModel();
+
+    //     $t = $model->existe_dni_modificar($datos);
+    //     if ($t > 0) {
+    //         $errors[] =  "Este numero de dni ya esta registrado";
+    //         return $errors;
+    //     }
+    // }
     private function validar($datos)
     {
         $errors = array();
@@ -207,6 +227,17 @@ class Compra extends BaseController
             $model_funciones = new FuncionesModel();
             $model_funciones->actualizar_correlativo("1", "1",  $post["id_tipo_comprobante"]);
 
+            //Guardar en kardex
+            $datos_kardex = $this->valores_kardex($datos);
+            $model_almacen = new AlmacenModel();
+            $id_kardex = $model_almacen->guardar_kardex($datos_kardex, "compra_temp");
+
+            // registra relación de almacen con kardex
+            $model->guardar_kardex_compra($id, $id_kardex);
+
+            //actualizar stock
+            $model_almacen->actualizar_stock($id_kardex);
+
             // registra cuenta por cobrar
             $model_credito = new CreditoModel();
             $datos_credito = $this->valores_credito($datos);
@@ -214,6 +245,7 @@ class Compra extends BaseController
 
             // registra relación de compra y credito
             $model->guardar_credito_compra($id, $id_credito);
+
 
             // elimina temp detalle
             $model->eliminar_temp($datos["id_usuario"]);
@@ -224,6 +256,19 @@ class Compra extends BaseController
         } else {
 
             $t = $model->modificar($post["idmodulo"], $datos);
+
+            //id kardex de kardex_compra
+            $id_kardex = $model->get_id_kardex($post["idmodulo"]);
+
+            //Guardar en kardex
+            $datos_kardex = $this->valores_kardex($datos);
+
+            $model_almacen = new AlmacenModel();
+            $model_almacen->modificar_kardex($id_kardex, $post["idmodulo"], $datos_kardex, "compra_temp");
+
+            //actualizar stock 
+            $model_almacen = new AlmacenModel();
+            $model_almacen->actualizar_stock($id_kardex);
 
             // recupera id del credito
             $model_credito = new CreditoModel();
@@ -257,27 +302,11 @@ class Compra extends BaseController
         $datos = $this->valores_producto($post);
         $model = new CompraModel();
 
-
-
-
-        $id = $model->guardar_producto($datos);
-
-        // suma total
-        if ($post["operacion"] == "0") {
-            $total = $model->get_suma_total($id, $datos["id_usuario"]);
-        } else {
-            $total = $model->get_suma_total($post["idmodulo"], $datos["id_usuario"]);
-        }
-
-        $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'total' => $total);
-
-        return $this->response->setJSON($rpta);
-
         if ($post["operacion"] == "0") {
             $id = $model->guardar_producto($datos);
 
             // suma total
-            $total = $model->get_suma_total($id, $datos["id_usuario"]);
+            $total = $model->get_suma_total("", $datos["id_usuario"]);
 
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'total' => $total);
         } else {

@@ -15,6 +15,15 @@ class ProductoModel extends Model
 		$res = $query->getResultArray();
 		return $res;
 	}
+	public function lista_stock()
+	{
+		$builder = $this->db->table('producto a');
+		$builder->join('inventario b', 'a.id_producto=b.id_producto','innner');
+		$builder->orderBy('a.producto');
+		$query = $builder->get();
+		$res = $query->getResultArray();
+		return $res;
+	}
 	public function modulo($id)
 	{
 		$builder = $this->db->table('producto a');

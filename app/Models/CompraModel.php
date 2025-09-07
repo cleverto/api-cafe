@@ -18,14 +18,15 @@ class CompraModel extends Model
 		$id_usuario = session()->get("data")["id_usuario"];
 		$this->db->query("
   INSERT INTO compra_temp (
-    id_modulo, id_producto, id_usuario, muestra, rendimiento, segunda, bola, cascara, humedad,
+    id_modulo, id_empresa, id_sucursal, id_almacen, id_producto, id_usuario, muestra, rendimiento, segunda, bola, cascara, humedad,
     descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
   )
   SELECT 
-    ? AS id_modulo, id_producto,  ? as id_usuario, muestra, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
-  FROM compra_detalle
-  WHERE id_compra = ?", [$post["id"], $id_usuario, $post["id"]]);
+    ? AS id_modulo, b.id_empresa, b.id_sucursal, b.id_almacen, a.id_producto,  ? as id_usuario, a.muestra, a.rendimiento, a.segunda, a.bola, a.cascara, a.humedad,
+    a.descarte, a.pasilla, a.negro, a.ripio, a.impureza, a.defectos, a.taza, a.cantidad, a.precio, a.total
+  FROM compra_detalle a
+  INNER JOIN compra b ON a.id_compra=b.id_compra
+  WHERE b.id_compra = ?", [$post["id"], $id_usuario, $post["id"]]);
 
 
 
@@ -50,6 +51,17 @@ class CompraModel extends Model
 		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
 		$builder->join('credito_compra c', 'a.id_compra = c.id_compra', 'inner');
 		$builder->where('a.fecha', $post["desde"]);
+		$builder->orderBy('a.fecha');
+		$query = $builder->get();
+		return  $query->getResultArray();;
+	}
+	public function filtro($post)
+	{
+		$builder = $this->db->table('compra a');
+		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
+		$builder->join('compra_detalle c', 'a.id_compra = c.id_compra', 'inner');
+		$builder->join('producto d', 'd.id_producto = c.id_producto', 'inner');
+		$builder->where('a.fecha BETWEEN "' . $post['desde'] . '" AND "' . $post['hasta'] . '"');
 		$builder->orderBy('a.fecha');
 		$query = $builder->get();
 		return  $query->getResultArray();;
@@ -82,7 +94,7 @@ class CompraModel extends Model
 	{
 		$builder = $this->db->table('compra a');
 		$builder->select('a.*');
-		$builder->select('b.proveedor, b.dni, c.simbolo');
+		$builder->select('b.proveedor, b.nro, c.simbolo');
 		$builder->select('d.id_credito');
 		// 	$builder->select("CASE 
 		//     WHEN a.id_moneda = 'USD' THEN ROUND(a.total * d.tipo_cambio,2)
@@ -96,6 +108,15 @@ class CompraModel extends Model
 
 		$query = $builder->get();
 		return $query->getRowArray();
+	}
+	public function get_id_kardex($id)
+	{
+		$builder = $this->db->table('kardex_compra');
+		$builder->select('id_kardex');
+		$builder->where('id_compra', $id);
+		$query = $builder->get()->getRow();
+
+		return $query->id_kardex ?? 0;;
 	}
 	public function get_total($id)
 	{
@@ -154,6 +175,16 @@ class CompraModel extends Model
 
 		return $id;
 	}
+	public function guardar_kardex_compra($id, $id_kardex)
+	{
+		$data = array("id_compra" => $id, "id_kardex" => $id_kardex);
+
+		$builder = $this->db->table('kardex_compra');
+		$builder->insert($data);
+		$id = $this->db->insertID();
+
+		return $id;
+	}
 	public function existe_dni($data)
 	{
 		$builder = $this->db->table('compra');
@@ -193,6 +224,18 @@ class CompraModel extends Model
 
 	public function eliminar($data)
 	{
+		$builder = $this->db->table('kardex_compra a');
+		$builder->select('id_kardex');
+		$builder->where('id_compra', $data["id"]);
+		$query = $builder->get()->getRow();
+		$id_kardex = $query->id_kardex ?? "";;
+
+		$datos_kardex = array('id_kardex' => $id_kardex);
+		$query = $this->db->table('kardex_compra')->delete($datos_kardex);
+		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
+		$query = $this->db->table('kardex')->delete($datos_kardex);
+
+
 		$datos = array('id_compra' => $data->id);
 		$query = $this->db->table('compra')->delete($datos);
 

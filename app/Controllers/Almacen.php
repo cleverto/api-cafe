@@ -9,26 +9,24 @@ use App\Models\FuncionesModel;
 
 class Almacen extends BaseController
 {
-    // public function lista()
-    // {
-    //     $post = json_decode(file_get_contents('php://input'), true);
-    //     $model = new AlmacenModel();
-    //     $data = $model->lista($post);
+    public function lista()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new AlmacenModel();
+        $data = $model->lista($post);
 
-    // 	$total = $model->get_total($post["id"]);
+        $rpta = array('items' => $data);
+        return $this->response->setJSON($rpta);
+    }
+    public function buscar()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new AlmacenModel();
+        $items = $model->buscar($post);
 
-    //     $rpta = array('items' => $data, 'total' => $total);
-    //     return $this->response->setJSON($rpta);
-    // }
-    // public function buscar()
-    // {
-    //     $post = json_decode(file_get_contents('php://input'), true);
-    //     $model = new AlmacenModel();
-    //     $items = $model->buscar($post);
-
-    //     $rpta = array('items' => $items);
-    //     return $this->response->setJSON($rpta);
-    // }
+        $rpta = array('items' => $items);
+        return $this->response->setJSON($rpta);
+    }
     // public function lista_detalle()
     // {
     //     $post = json_decode(file_get_contents('php://input'), true);
@@ -42,6 +40,7 @@ class Almacen extends BaseController
     {
         $post = json_decode(file_get_contents('php://input'), true);
         $id_usuario = session()->get("data")["id_usuario"];
+
         $model = new AlmacenModel();
         $data = $model->lista_temp($post["id"], $id_usuario);
 
@@ -51,19 +50,15 @@ class Almacen extends BaseController
         $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
-    // public function modulo()
-    // {
-    //     $data = json_decode(file_get_contents('php://input'), true);
-    //     $model = new AlmacenModel();
-    //     $items = $model->modulo($data["id"]);
+    public function modulo()
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $model = new AlmacenModel();
+        $items = $model->modulo($data["id"]);
 
-    //     $id_usuario = session()->get("data")["id_usuario"];
-    //     $total = $model->get_suma_total($data["id"], $id_usuario);
-
-
-    //     $rpta = array('rpta' => '1', 'items' => $items, 'total' => $total);
-    //     return $this->response->setJSON($rpta);
-    // }
+        $rpta = array('rpta' => '1', 'items' => $items);
+        return $this->response->setJSON($rpta);
+    }
 
     private function valores($post)
     {
@@ -79,6 +74,7 @@ class Almacen extends BaseController
             'id_tipo_comprobante' => $post["id_tipo_comprobante"],
             'operacion' => $operacion,
             'motivo' => $post["motivo"],
+            'fecha' => $post["fecha"],
             'nro_comprobante' =>  $nro_comprobante,
         );
 
@@ -108,6 +104,9 @@ class Almacen extends BaseController
         $id_usuario = session()->get("data")["id_usuario"];
         $datos = array(
             'id_modulo' => $data['idmodulo'],
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_almacen' => "1",
             'id_usuario' => $id_usuario,
             'id_producto' => $data['id_producto'],
             'cantidad'    => $data['cantidad'],
@@ -144,6 +143,15 @@ class Almacen extends BaseController
             // Actualizar correlativo
             $model_funciones = new FuncionesModel();
             $model_funciones->actualizar_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+
+            //Guardar en kardex                        
+            $id_kardex = $model->guardar_kardex($datos, "nota_almacen_temp");
+
+            // registra relación de almacen con kardex
+            $model->guardar_kardex_almacen($id, $id_kardex);
+
+            //actualizar stock
+            $model->actualizar_stock($id_kardex);
 
             // elimina temp detalle
             $model->eliminar_temp($datos["id_usuario"]);
@@ -190,18 +198,18 @@ class Almacen extends BaseController
 
         return $this->response->setJSON($rpta);
     }
-    // public function eliminar()
-    // {
-    //     $post = json_decode(file_get_contents('php://input'));
-    //     $model = new AlmacenModel();
-    //     $t = $model->eliminar($post);
-    //     $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
-    //     if ($t <= 0) {
+    public function eliminar()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new AlmacenModel();
+        $t = $model->eliminar($post);
+        $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
+        if ($t <= 0) {
 
-    //         $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");
-    //     }
-    //     return $this->response->setJSON($rpta);
-    // }
+            $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");
+        }
+        return $this->response->setJSON($rpta);
+    }
     public function eliminar_producto()
     {
         $post = json_decode(file_get_contents('php://input'), true);

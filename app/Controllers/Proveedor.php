@@ -39,7 +39,7 @@ class Proveedor extends BaseController
             'id_ubigeo' => $data["id_ubigeo"],
             'id_identidad' => "1",
             'tipo' => $data["tipo"],
-            'dni' => $data["dni"],
+            'nro' => $data["dni"],
             'proveedor' => $data["proveedor"],
             'direccion' => $data["direccion"],
             'telefono' => $data["telefono"],
@@ -75,8 +75,6 @@ class Proveedor extends BaseController
 
         $datos = $this->valores($post);
         $model = new ProveedorModel();
-
-
         if ($post["operacion"] == "0") {
 
 
