@@ -199,7 +199,6 @@ class AlmacenModel extends Model
 		$builder->insert($datos);
 		$id = $this->db->insertID();
 
-
 		$this->db->query("
 	  INSERT INTO kardex_detalle (
 	    id_kardex, id_producto, cantidad, precio, total

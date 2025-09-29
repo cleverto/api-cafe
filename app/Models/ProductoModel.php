@@ -18,7 +18,8 @@ class ProductoModel extends Model
 	public function lista_stock()
 	{
 		$builder = $this->db->table('producto a');
-		$builder->join('inventario b', 'a.id_producto=b.id_producto','innner');
+		$builder->join('inventario b', 'a.id_producto=b.id_producto','inner');
+		$builder->join('cfg c', 'b.id_empresa=c.id_empresa and b.id_sucursal=c.id_sucursal ','inner');
 		$builder->orderBy('a.producto');
 		$query = $builder->get();
 		$res = $query->getResultArray();

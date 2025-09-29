@@ -41,6 +41,7 @@ class Producto extends BaseController
             'id_sucursal' => "1",
             'id_categoria' => $data["id_categoria"],
             'producto' => $data["producto"],
+            'qq' => $data["qq"],
         );
 
         return $datos;

@@ -26,6 +26,14 @@ class Compra extends BaseController
         $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
+    public function lista_sin_secar()
+    {
+        $model = new CompraModel();
+        $data = $model->lista_sin_secar();
+
+        $rpta = array('items' => $data);
+        return $this->response->setJSON($rpta);
+    }
     public function buscar()
     {
         $post = json_decode(file_get_contents('php://input'), true);
@@ -118,6 +126,7 @@ class Compra extends BaseController
     }
     private function valores_producto($data)
     {
+
         $id_usuario = session()->get("data")["id_usuario"];
         $datos = array(
             'id_modulo' => $data['idmodulo'],
@@ -127,6 +136,8 @@ class Compra extends BaseController
             'id_usuario' => $id_usuario,
             'id_producto' => $data['id_producto'],
             'muestra' => $data['muestra'],
+            'sacos' => $data['sacos'],
+            'tara' => $data['tara'],
             'rendimiento' => $data['rendimiento'],
             'segunda'  => "0",
             'bola'        => "0",
@@ -139,6 +150,9 @@ class Compra extends BaseController
             'impureza'    => "0",
             'defectos'    => "0",
             'taza'        => "0",
+            'kg_bruto'    => $data['kg_bruto'],
+            'kg_neto'    => $data['kg_neto'],
+            'qq_bruto'    => $data['qq_bruto'],
             'cantidad'    => $data['cantidad'],
             'precio'      => $data['precio'],
             'total'       => $data['total'],
@@ -175,7 +189,7 @@ class Compra extends BaseController
             'id_almacen' => "1",
             'id_usuario' => $datos["id_usuario"],
             'id_tipo_comprobante' => $datos["id_tipo_comprobante"],
-            'operacion' => "S",
+            'operacion' => "I",
             'nro_comprobante' => $datos["referencia"],
             'motivo' => "Compra",
             'fecha' => $datos["fecha"],
@@ -229,6 +243,7 @@ class Compra extends BaseController
 
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
+
             $model_almacen = new AlmacenModel();
             $id_kardex = $model_almacen->guardar_kardex($datos_kardex, "compra_temp");
 

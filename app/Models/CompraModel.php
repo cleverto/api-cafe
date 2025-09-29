@@ -42,6 +42,30 @@ class CompraModel extends Model
 
 		return $data;
 	}
+
+public function lista_sin_secar()
+{
+    $builder = $this->db->table('compra a');
+    $builder->select('
+        a.id_compra, 
+        a.fecha, 
+        a.referencia, 
+        p.proveedor, 
+        a.total, 
+        SUM(d.cantidad) as cantidad, 
+        "0" as activo
+    ');
+    $builder->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');		
+	$builder->join('secado_detalle sd', 'sd.id_compra = a.id_compra', 'left');
+	$builder->join('secado s', 's.id_secado = sd.id_secado', 'left');
+    $builder->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
+    $builder->where('s.id_secado IS NULL');
+    $builder->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total'); // 👈 agrupamos por compra
+    $query = $builder->get();
+
+    return $query->getResultArray();
+}
+
 	public function buscar($post)
 	{
 		$builder = $this->db->table('compra a');
@@ -148,12 +172,12 @@ class CompraModel extends Model
 
 		$this->db->query("
   INSERT INTO compra_detalle (
-    id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+    id_compra, id_producto, muestra, sacos, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, kg_bruto, kg_neto, qq_bruto, cantidad, precio, total
   )
   SELECT 
-    ? AS id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
+    ? AS id_compra, id_producto, muestra, sacos, rendimiento, segunda, bola, cascara, humedad,
+    descarte, pasilla, negro, ripio, impureza, defectos, taza, kg_bruto, kg_neto, qq_bruto, cantidad, precio, total
   FROM compra_temp
   WHERE id_usuario = ?", [$id, $datos["id_usuario"]]);
 
