@@ -26,7 +26,15 @@ class Secado extends BaseController
         $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
+    public function buscar()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new SecadoModel();
+        $items = $model->buscar($post);
 
+        $rpta = array('items' => $items);
+        return $this->response->setJSON($rpta);
+    }
 
     private function valores($post)
     {
@@ -40,7 +48,7 @@ class Secado extends BaseController
             'id_sucursal' => "1",
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
-            'operacion' => "I",
+            'operacion' => "S",
             'id_tipo_comprobante' => $post["id_tipo_comprobante"],
             'nro_comprobante' =>  $nro_comprobante,
             'fecha' => date('Y-m-d H:i:s'),
@@ -139,7 +147,7 @@ class Secado extends BaseController
 
     public function eliminar()
     {
-        $post = json_decode(file_get_contents('php://input'));
+        $post = json_decode(file_get_contents('php://input'), true);
         $model = new SecadoModel();
         $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");

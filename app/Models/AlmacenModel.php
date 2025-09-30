@@ -45,8 +45,29 @@ class AlmacenModel extends Model
 		$builder->where('a.fecha BETWEEN "' . $post['desde'] . '" AND "' . $post['hasta'] . '"');
 		$builder->orderBy('a.fecha');
 		$query = $builder->get();
-		return  $query->getResultArray();;
+		$data =  $query->getResultArray();
+
+
+
+		return $data;
 	}
+	public function filtro($post)
+	{
+		$builder = $this->db->table('kardex a');
+		$builder->select('a.fecha, a.motivo, a.operacion, c.cantidad, d.producto');
+
+
+		$builder->join('kardex_detalle c', 'a.id_kardex = c.id_kardex', 'inner');
+		$builder->join('producto d', 'd.id_producto = c.id_producto', 'inner');
+		$builder->where('c.id_producto', $post['id']);
+		$builder->where('DATE(a.fecha) BETWEEN "' . $post['desde'] . '" AND "' . $post['hasta'] . '"');
+		$builder->orderBy('a.fecha, a.operacion, a.motivo', 'ASC');
+		
+
+		$query = $builder->get();
+		return $query->getResultArray();
+	}
+
 	// 	public function lista_detalle($id)
 	// 	{
 	// 		$builder = $this->db->table('compra_detalle a');
@@ -167,31 +188,44 @@ class AlmacenModel extends Model
 				$m['id_producto']
 			]);
 		}
+	}
+	public function restaurar_stock($id, $productos)
+	{
 
-		// 		$sql = "
-		// UPDATE inventario a
-		// JOIN (
-		//     SELECT 
-		//         k.id_empresa,
-		//         k.id_sucursal,
-		//         k.id_almacen,
-		//         d.id_producto,
-		//         SUM(CASE WHEN k.operacion = 'I' THEN d.cantidad ELSE 0 END) -
-		//         SUM(CASE WHEN k.operacion = 'S' THEN d.cantidad ELSE 0 END) AS saldo
-		//     FROM kardex k
-		//     JOIN kardex_detalle d ON k.id_kardex = d.id_kardex
-		//     WHERE k.id_kardex = ? 
-		//     GROUP BY k.id_empresa, k.id_sucursal, k.id_almacen, d.id_producto
-		// ) AS temp ON 
-		//     a.id_empresa = temp.id_empresa AND
-		//     a.id_sucursal = temp.id_sucursal AND
-		//     a.id_almacen = temp.id_almacen AND
-		//     a.id_producto = temp.id_producto
-		// SET a.stock = temp.saldo
-		// ";
 
-		// 		$params = [$id];
-		// 		$this->db->query($sql, $params);
+		foreach ($productos as $m) {
+			// Consulta para obtener ingresos y salidas del producto actual
+			$sqlSaldo = "
+        SELECT 
+            SUM(CASE WHEN k.operacion = 'I' THEN d.cantidad ELSE 0 END) AS ingresos,
+            SUM(CASE WHEN k.operacion = 'S' THEN d.cantidad ELSE 0 END) AS salidas
+        FROM kardex k
+        JOIN kardex_detalle d ON k.id_kardex = d.id_kardex
+        WHERE k.id_empresa = ? AND k.id_sucursal = ? AND k.id_almacen = ? AND d.id_producto = ?
+    ";
+
+			$result = $this->db->query($sqlSaldo, [
+				$m['id_empresa'],
+				$m['id_sucursal'],
+				$m['id_almacen'],
+				$m['id_producto']
+			])->getRowArray();
+
+			$saldo = $result['ingresos'] - $result['salidas'];
+
+			// Actualizar el stock en inventario
+			$this->db->query("
+        UPDATE inventario
+        SET stock = ?
+        WHERE id_empresa = ? AND id_sucursal = ? AND id_almacen = ? AND id_producto = ?
+    ", [
+				$saldo,
+				$m['id_empresa'],
+				$m['id_sucursal'],
+				$m['id_almacen'],
+				$m['id_producto']
+			]);
+		}
 	}
 	public function guardar_kardex($datos, $tabla_temp)
 	{

@@ -38,19 +38,29 @@ class SecadoModel extends Model
 		return $data;
 	}
 
-
 	public function buscar($post)
 	{
 		$builder = $this->db->table('secado a');
 		$builder->select('a.*');
-		$builder->select('b.proveedor');
-		$builder->select('c.id_credito');
-		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
-		$builder->join('credito_compra c', 'a.id_compra = c.id_compra', 'inner');
+
+		// Concatenar todos los nro_comprobante en una sola celda
+		$builder->select("GROUP_CONCAT(aa.nro_comprobante SEPARATOR ', ') as referencia");
+
+		// Concatenar todos los proveedores en una sola celda
+		$builder->select("GROUP_CONCAT(b.proveedor SEPARATOR ', ') as proveedores");
+
+		$builder->join('secado_detalle d', 'a.id_secado = d.id_secado', 'inner');
+		$builder->join('compra aa', 'aa.id_compra = d.id_compra', 'inner');
+		$builder->join('proveedor b', 'aa.id_proveedor = b.id_proveedor', 'inner');
+
 		$builder->where('a.fecha', $post["desde"]);
+
+		// Agrupar por id_secado para que no repita filas
+		$builder->groupBy('a.id_secado');
 		$builder->orderBy('a.fecha');
+
 		$query = $builder->get();
-		return  $query->getResultArray();;
+		return $query->getResultArray();
 	}
 
 
@@ -86,7 +96,7 @@ class SecadoModel extends Model
 		$builder = $this->db->table('secado_detalle');
 		$builder->insertBatch($batch);
 	}
-	public function guardar($datos, $compras)
+	public function guardar($datos)
 	{
 		$builder = $this->db->table('secado');
 		$builder->insert($datos);
@@ -160,5 +170,44 @@ class SecadoModel extends Model
   WHERE id_modulo = ? AND id_usuario = ?", [$id, $id, $datos["id_usuario"]]);
 
 		return $t;
+	}
+
+	public function eliminar($data)
+	{
+		$builder = $this->db->table('secado_detalle a');
+		$builder->select('id_kardex');
+		$builder->where('id_secado', $data["id"]);
+		$query = $builder->get()->getRow();
+		$id_kardex = $query->id_kardex ?? "";;
+
+
+		$sql = "
+    SELECT 
+        k.id_empresa,
+        k.id_sucursal,
+        k.id_almacen,
+        d.id_producto,
+        k.operacion,
+        d.cantidad
+    FROM kardex k
+    JOIN kardex_detalle d ON k.id_kardex = d.id_kardex
+    WHERE k.id_kardex = ?
+";
+		$productos = $this->db->query($sql, [$id_kardex])->getResultArray();
+
+
+
+		$datos_kardex = array('id_kardex' => $id_kardex);
+		$datos = array('id_secado' => $data["id"]);
+		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
+		$query = $this->db->table('kardex')->delete($datos_kardex);
+		$query = $this->db->table('secado_detalle')->delete($datos);
+
+		$model_almacen = new AlmacenModel();
+		$model_almacen->restaurar_stock($id_kardex, $productos);
+
+		$query = $this->db->table('secado')->delete($datos);
+
+		return $query;
 	}
 }
