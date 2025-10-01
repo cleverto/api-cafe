@@ -69,16 +69,18 @@ class SecadoModel extends Model
 		// --- Compras que NO están en secado_compra ---
 		$builder1 = $db->table('compra_detalle cd');
 		$builder1->select([
-			'c.fecha AS fecha',
-			'p.nombre AS producto',
-			'"Compra" AS motivo',
-			'cd.cantidad AS ingreso',
-			'0 AS salida'
+			'c.fecha',
+			'p.producto',
+			'"Compra" AS operacion',
+			'cd.cantidad',
+			'cd.rendimiento',
+			'cd.cascara', 
+			'cd.humedad'
 		]);
 		$builder1->join('compra c', 'c.id_compra = cd.id_compra', 'inner');
 		$builder1->join('producto p', 'p.id_producto = cd.id_producto', 'inner');
 		$builder1->join('secado_compra sc', 'sc.id_compra = c.id_compra', 'left');
-		$builder1->where('sc.id_compra IS NULL');
+		$builder1->where('sc.id_compra  IS  NULL');
 		if (!empty($post['id'])) {
 			$builder1->where('cd.id_producto', $post['id']);
 		}
@@ -88,20 +90,22 @@ class SecadoModel extends Model
 		// --- Productos que retornaron del secado ---
 		$builder2 = $db->table('secado_detalle sd');
 		$builder2->select([
-			's.fecha_retorno AS fecha',
-			'p.nombre AS producto',
-			'"Secado" AS motivo',
-			'0 AS ingreso',
-			'sd.cantidad AS salida'
+			's.fecha',
+			'p.producto',
+			'"Secado" AS operacion',
+			'sd.cantidad',
+			'sd.rendimiento',
+			'sd.cascara', 
+			'sd.humedad'
 		]);
 		$builder2->join('secado s', 's.id_secado = sd.id_secado', 'inner');
 		$builder2->join('producto p', 'p.id_producto = sd.id_producto', 'inner');
-		$builder2->where('s.estado', 'retornado');
+		$builder2->where('s.operacion', 'S');
 		if (!empty($post['id'])) {
 			$builder2->where('sd.id_producto', $post['id']);
 		}
-		$builder2->where('DATE(s.fecha_retorno) >=', $post['desde']);
-		$builder2->where('DATE(s.fecha_retorno) <=', $post['hasta']);
+		$builder2->where('DATE(s.fecha) >=', $post['desde']);
+		$builder2->where('DATE(s.fecha) <=', $post['hasta']);
 
 		// --- Unir ambas consultas ---
 		$builder1->unionAll($builder2);
@@ -171,21 +175,32 @@ class SecadoModel extends Model
 
 		// 3. A partir de las compras activas, insertar en kardex_detalle
 		$kardexBatch = [];
+		$compraBatch = [];
 		foreach ($compras as $detalle) {
 			// Obtener detalle de cada compra
 			$detallesCompra = $this->db->table('compra_detalle')
-				->select('id_producto, cantidad')
+				->select('id_producto, cantidad, rendimiento, cascara, humedad')
 				->where('id_compra', $detalle['id_compra'])
 				->get()
 				->getResultArray();
 
 			foreach ($detallesCompra as $dc) {
 				$kardexBatch[] = [
-					'id_kardex'   => $id_kardex,        // opcional si quieres trazar
+					'id_kardex'   => $id_kardex,
 					'id_producto' => $dc['id_producto'],
 					'cantidad'    => $dc['cantidad'],
 					'precio'    => '0',
 					'total'    => '0',
+				];
+			}
+
+			foreach ($detallesCompra as $dc) {
+				$compraBatch[] = [
+					'id_producto' => $dc['id_producto'],
+					'cantidad'    => $dc['cantidad'],
+					'rendimiento'    => $dc['rendimiento'],
+					'cascara'    => $dc['cascara'],
+					'humedad'    => $dc['humedad'],
 				];
 			}
 		}
@@ -193,7 +208,26 @@ class SecadoModel extends Model
 		if (!empty($kardexBatch)) {
 			$this->db->table('kardex_detalle')->insertBatch($kardexBatch);
 		}
-		return $id_kardex;
+
+		return [$id_kardex, $compraBatch];
+	}
+	public function guardar_detalle($id, $detalle)
+	{
+		$detalleBatch = [];
+		foreach ($detalle as $dc) {
+			$detalleBatch[] = [
+				'id_secado'   => $id,
+				'id_producto' => $dc['id_producto'],
+				'cantidad'    => $dc['cantidad'],
+				'rendimiento'    => $dc['rendimiento'],
+				'cascara'    => $dc['cascara'],
+				'humedad'    => $dc['humedad'],
+			];
+		}
+
+		if (!empty($detalleBatch)) {
+			$this->db->table('secado_detalle')->insertBatch($detalleBatch);
+		}
 	}
 	public function modificar($id, $datos)
 	{
@@ -249,6 +283,7 @@ class SecadoModel extends Model
 		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
 		$query = $this->db->table('kardex')->delete($datos_kardex);
 		$query = $this->db->table('secado_compra')->delete($datos);
+		$query = $this->db->table('secado_detalle')->delete($datos);
 
 		$model_almacen = new AlmacenModel();
 		$model_almacen->restaurar_stock($id_kardex, $productos);

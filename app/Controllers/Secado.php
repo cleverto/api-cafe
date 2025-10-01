@@ -95,14 +95,15 @@ class Secado extends BaseController
 
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
-            $id_kardex = $model->guardar_kardex($datos_kardex, $compras);
+            list($id_kardex, $detalleCompra)   = $model->guardar_kardex($datos_kardex, $compras);
+
+            $model->guardar_detalle($id, $detalleCompra);
 
             $model->secado_compra($id, $id_kardex, $compras);
 
             //actualizar stock
             $model_almacen = new AlmacenModel();
             $model_almacen->actualizar_stock($id_kardex);
-
 
             // *********
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
