@@ -56,7 +56,7 @@ public function lista_sin_secar()
         "0" as activo
     ');
     $builder->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');		
-	$builder->join('secado_detalle sd', 'sd.id_compra = a.id_compra', 'left');
+	$builder->join('secado_compra sd', 'sd.id_compra = a.id_compra', 'left');
 	$builder->join('secado s', 's.id_secado = sd.id_secado', 'left');
     $builder->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
     $builder->where('s.id_secado IS NULL');

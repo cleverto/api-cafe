@@ -49,7 +49,7 @@ class SecadoModel extends Model
 		// Concatenar todos los proveedores en una sola celda
 		$builder->select("GROUP_CONCAT(b.proveedor SEPARATOR ', ') as proveedores");
 
-		$builder->join('secado_detalle d', 'a.id_secado = d.id_secado', 'inner');
+		$builder->join('secado_compra d', 'a.id_secado = d.id_secado', 'inner');
 		$builder->join('compra aa', 'aa.id_compra = d.id_compra', 'inner');
 		$builder->join('proveedor b', 'aa.id_proveedor = b.id_proveedor', 'inner');
 
@@ -62,7 +62,54 @@ class SecadoModel extends Model
 		$query = $builder->get();
 		return $query->getResultArray();
 	}
+	public function filtro_compras($post)
+	{
+		$db = $this->db;
 
+		// --- Compras que NO están en secado_compra ---
+		$builder1 = $db->table('compra_detalle cd');
+		$builder1->select([
+			'c.fecha AS fecha',
+			'p.nombre AS producto',
+			'"Compra" AS motivo',
+			'cd.cantidad AS ingreso',
+			'0 AS salida'
+		]);
+		$builder1->join('compra c', 'c.id_compra = cd.id_compra', 'inner');
+		$builder1->join('producto p', 'p.id_producto = cd.id_producto', 'inner');
+		$builder1->join('secado_compra sc', 'sc.id_compra = c.id_compra', 'left');
+		$builder1->where('sc.id_compra IS NULL');
+		if (!empty($post['id'])) {
+			$builder1->where('cd.id_producto', $post['id']);
+		}
+		$builder1->where('DATE(c.fecha) >=', $post['desde']);
+		$builder1->where('DATE(c.fecha) <=', $post['hasta']);
+
+		// --- Productos que retornaron del secado ---
+		$builder2 = $db->table('secado_detalle sd');
+		$builder2->select([
+			's.fecha_retorno AS fecha',
+			'p.nombre AS producto',
+			'"Secado" AS motivo',
+			'0 AS ingreso',
+			'sd.cantidad AS salida'
+		]);
+		$builder2->join('secado s', 's.id_secado = sd.id_secado', 'inner');
+		$builder2->join('producto p', 'p.id_producto = sd.id_producto', 'inner');
+		$builder2->where('s.estado', 'retornado');
+		if (!empty($post['id'])) {
+			$builder2->where('sd.id_producto', $post['id']);
+		}
+		$builder2->where('DATE(s.fecha_retorno) >=', $post['desde']);
+		$builder2->where('DATE(s.fecha_retorno) <=', $post['hasta']);
+
+		// --- Unir ambas consultas ---
+		$builder1->unionAll($builder2);
+
+		// Ejecutar
+		$query = $builder1->get();
+		return $query->getResultArray();
+	}
 
 	public function modulo($id)
 	{
@@ -81,7 +128,7 @@ class SecadoModel extends Model
 		return $query->getRowArray();
 	}
 
-	public function guardar_detalle($id, $id_kardex, $compras)
+	public function secado_compra($id, $id_kardex, $compras)
 	{
 		$batch = [];
 		foreach ($compras as $row) {
@@ -93,7 +140,7 @@ class SecadoModel extends Model
 		}
 
 
-		$builder = $this->db->table('secado_detalle');
+		$builder = $this->db->table('secado_compra');
 		$builder->insertBatch($batch);
 	}
 	public function guardar($datos)
@@ -174,7 +221,7 @@ class SecadoModel extends Model
 
 	public function eliminar($data)
 	{
-		$builder = $this->db->table('secado_detalle a');
+		$builder = $this->db->table('secado_compra a');
 		$builder->select('id_kardex');
 		$builder->where('id_secado', $data["id"]);
 		$query = $builder->get()->getRow();
@@ -201,7 +248,7 @@ class SecadoModel extends Model
 		$datos = array('id_secado' => $data["id"]);
 		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
 		$query = $this->db->table('kardex')->delete($datos_kardex);
-		$query = $this->db->table('secado_detalle')->delete($datos);
+		$query = $this->db->table('secado_compra')->delete($datos);
 
 		$model_almacen = new AlmacenModel();
 		$model_almacen->restaurar_stock($id_kardex, $productos);
