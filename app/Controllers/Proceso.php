@@ -5,11 +5,10 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\AlmacenModel;
-use App\Models\SecadoModel;
-use App\Models\CreditoModel;
+use App\Models\ProcesoModel;
 use App\Models\FuncionesModel;
 
-class Secado extends BaseController
+class Proceso extends BaseController
 {
     public function __construct()
     {
@@ -18,18 +17,17 @@ class Secado extends BaseController
     public function lista()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new SecadoModel();
+        $model = new ProcesoModel();
         $data = $model->lista($post);
 
-        $total = $model->get_total($post["id"]);
-
-        $rpta = array('items' => $data, 'total' => $total);
+        $rpta = array('items' => $data);
         return $this->response->setJSON($rpta);
     }
+
     public function lista_detalle()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new SecadoModel();
+        $model = new ProcesoModel();
         $data = $model->lista_detalle($post["id"]);
 
         $rpta = array('items' => $data);
@@ -38,7 +36,7 @@ class Secado extends BaseController
     public function buscar()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new SecadoModel();
+        $model = new ProcesoModel();
         $items = $model->buscar($post);
 
         $rpta = array('items' => $items);
@@ -94,7 +92,7 @@ class Secado extends BaseController
         $datos = $datos[0];
         $compras = $post["compras"];
 
-        $model = new SecadoModel();
+        $model = new ProcesoModel();
         if ($post["form"]["operacion"] == "0") {
 
             $id = $model->guardar($datos, $compras);
@@ -159,7 +157,7 @@ class Secado extends BaseController
     public function eliminar()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new SecadoModel();
+        $model = new ProcesoModel();
         $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
         if ($t <= 0) {
@@ -204,7 +202,7 @@ class Secado extends BaseController
         $datos = $this->valores_retorno($post);
 
         $compras = $post['rowdata'];
-        $model = new SecadoModel();
+        $model = new ProcesoModel();
 
 
         // Insertar todos los registros de una vez

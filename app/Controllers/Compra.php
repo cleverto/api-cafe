@@ -101,6 +101,7 @@ class Compra extends BaseController
             'son' => $son,
             'fecha' => date('Y-m-d H:i:s'),
             'nro_comprobante' =>  $nro_comprobante,
+            'estado' =>  "0",
         );
 
         return $datos;
@@ -245,7 +246,7 @@ class Compra extends BaseController
             $datos_kardex = $this->valores_kardex($datos);
 
             $model_almacen = new AlmacenModel();
-            $id_kardex = $model_almacen->guardar_kardex($datos_kardex, "compra_temp");
+            $id_kardex = $model_almacen->guardar_kardex("", $datos_kardex, "compra_temp");
 
             // registra relación de almacen con kardex
             $model->guardar_kardex_compra($id, $id_kardex);
@@ -269,17 +270,23 @@ class Compra extends BaseController
             // *********
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'id_credito' => $id_credito);
         } else {
-
+            $id = $post["idmodulo"];
             $t = $model->modificar($post["idmodulo"], $datos);
 
             //id kardex de kardex_compra
-            $id_kardex = $model->get_id_kardex($post["idmodulo"]);
+            //$id_kardex = $model->get_id_kardex($post["idmodulo"]);
 
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
 
+
             $model_almacen = new AlmacenModel();
-            $model_almacen->modificar_kardex($id_kardex, $post["idmodulo"], $datos_kardex, "compra_temp");
+            $model->eliminar_kardex($id);
+            $id_kardex = $model_almacen->guardar_kardex($id, $datos_kardex, "compra_temp");
+
+            //$id_kardex = $model_almacen->modificar_kardex($id_kardex, $id, $datos_kardex, "compra_temp");
+            $model->guardar_kardex_compra($id, $id_kardex);
+
 
             //actualizar stock 
             $model_almacen = new AlmacenModel();
@@ -287,7 +294,7 @@ class Compra extends BaseController
 
             // recupera id del credito
             $model_credito = new CreditoModel();
-            $id_credito = $model_credito->get_id_by_compra($post["idmodulo"]);
+            $id_credito = $model_credito->get_id_by_compra($id);
 
             // registra cuenta por cobrar
 

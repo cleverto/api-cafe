@@ -62,7 +62,7 @@ class Reporte extends BaseController
         $vista["lista"] = $model->filtro_compras($datos);
         $vista["filtro"] = $datos;
 
-        return view('comprassecado', $vista);
+        return view('Comprassecado', $vista);
     }
 
 }

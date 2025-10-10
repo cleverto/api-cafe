@@ -43,10 +43,10 @@ class CompraModel extends Model
 		return $data;
 	}
 
-public function lista_sin_secar()
-{
-    $builder = $this->db->table('compra a');
-    $builder->select('
+	public function lista_sin_secar()
+	{
+		$builder = $this->db->table('compra a');
+		$builder->select('
         a.id_compra, 
         a.fecha, 
         a.referencia, 
@@ -55,16 +55,17 @@ public function lista_sin_secar()
         SUM(d.cantidad) as cantidad, 
         "0" as activo
     ');
-    $builder->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');		
-	$builder->join('secado_compra sd', 'sd.id_compra = a.id_compra', 'left');
-	$builder->join('secado s', 's.id_secado = sd.id_secado', 'left');
-    $builder->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
-    $builder->where('s.id_secado IS NULL');
-    $builder->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total'); // 👈 agrupamos por compra
-    $query = $builder->get();
+		$builder->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');
+		// $builder->join('secado_compra sd', 'sd.id_compra = a.id_compra', 'left');
+		// $builder->join('secado s', 's.id_secado = sd.id_secado', 'left');
+		$builder->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
+		// $builder->where('s.id_secado IS NULL');
+		$builder->where('a.estado', "0");
+		$builder->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total'); // 👈 agrupamos por compra
+		$query = $builder->get();
 
-    return $query->getResultArray();
-}
+		return $query->getResultArray();
+	}
 
 	public function buscar($post)
 	{
@@ -74,7 +75,7 @@ public function lista_sin_secar()
 		$builder->select('c.id_credito');
 		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
 		$builder->join('credito_compra c', 'a.id_compra = c.id_compra', 'inner');
-		$builder->where('a.fecha', $post["desde"]);
+		$builder->where('a.fecha BETWEEN "' . $post['desde'] . '" AND "' . $post['hasta'] . '"');
 		$builder->orderBy('a.fecha');
 		$query = $builder->get();
 		return  $query->getResultArray();;
@@ -271,6 +272,24 @@ public function lista_sin_secar()
 		$query = $this->db->table('compra_temp')->delete($datos);
 
 		return $query;
+	}
+	public function eliminar_kardex($id)
+	{
+		$kardexIds = $this->db->table('kardex_compra')
+			->select('id_kardex')
+			->where('id_compra', $id)
+			->get()
+			->getResultArray();
+
+		if (!empty($kardexIds)) {
+			$ids = array_column($kardexIds, 'id_kardex');
+
+			// 2️⃣ Eliminar los kardex relacionados
+			$this->db->table('kardex')->whereIn('id_kardex', $ids)->delete();
+		}
+
+		// 3️⃣ Eliminar de kardex_compra
+		$this->db->table('kardex_compra')->where('id_compra', $id)->delete();
 	}
 	public function eliminar_temp_by_id_modulo($id)
 	{

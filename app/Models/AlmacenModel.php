@@ -227,11 +227,11 @@ class AlmacenModel extends Model
 			]);
 		}
 	}
-	public function guardar_kardex($datos, $tabla_temp)
+	public function guardar_kardex($id, $datos, $tabla_temp)
 	{
 		$builder = $this->db->table('kardex');
 		$builder->insert($datos);
-		$id = $this->db->insertID();
+		$id_kardex = $this->db->insertID();
 
 		$this->db->query("
 	  INSERT INTO kardex_detalle (
@@ -240,9 +240,9 @@ class AlmacenModel extends Model
 	  SELECT 
 	    ? AS id, id_producto, cantidad, precio, total
 	  FROM " . $tabla_temp . "
-	  WHERE id_usuario = ?", [$id, $datos["id_usuario"]]);
+	  WHERE id_modulo = ? AND id_usuario = ?", [$id_kardex, $id, $datos["id_usuario"]]);
 
-		return $id;
+		return $id_kardex;
 	}
 	public function guardar_producto($data)
 	{

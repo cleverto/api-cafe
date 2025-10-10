@@ -4,38 +4,67 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class SecadoModel extends Model
+class ProcesoModel extends Model
 {
 
 	public function lista($post)
 	{
-		$datos = array('id_modulo' => $post["id"]);
-		$this->db->table('compra_temp')->delete($datos);
+		// Primera consulta (compra)
+		$builder1 = $this->db->table('compra a');
+		$builder1->select('
+    a.id_compra, "Compra" as modulo,
+    a.fecha, 
+	a.nro_comprobante,
+    a.referencia, 
+    p.proveedor, 
+    a.total, 
+    SUM(d.cantidad) AS cantidad, 
+    "compra" AS tipo
+');
+		$builder1->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');
+		$builder1->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
+		$builder1->where('a.estado', '0');
+		$builder1->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total');
 
-		$id_usuario = session()->get("data")["id_usuario"];
-		$this->db->query("
-  INSERT INTO compra_temp (
-    id_modulo, id_empresa, id_sucursal, id_almacen, id_producto, id_usuario, muestra, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
-  )
-  SELECT 
-    ? AS id_modulo, b.id_empresa, b.id_sucursal, b.id_almacen, a.id_producto,  ? as id_usuario, a.muestra, a.rendimiento, a.segunda, a.bola, a.cascara, a.humedad,
-    a.descarte, a.pasilla, a.negro, a.ripio, a.impureza, a.defectos, a.taza, a.cantidad, a.precio, a.total
-  FROM compra_detalle a
-  INNER JOIN secado b ON a.id_compra=b.id_compra
-  WHERE b.id_compra = ?", [$post["id"], $id_usuario, $post["id"]]);
+		// Obtenemos el SQL sin ejecutar
+		$sql1 = $builder1->getCompiledSelect();
+
+		// Segunda consulta (secado)
+		$builder2 = $this->db->table('secado a');
+		$builder2->distinct();
+		$builder2->select('
+    a.id_secado AS id_compra, "Secado" as modulo,
+    a.fecha, 
+	a.nro_comprobante,
+    GROUP_CONCAT(DISTINCT c.referencia ORDER BY c.referencia SEPARATOR ", ") AS referencia,
+	GROUP_CONCAT(DISTINCT p.proveedor ORDER BY p.proveedor SEPARATOR ", ") AS proveedor,
+    a.total, 
+    SUM(d.cantidad) AS cantidad, 
+    "secado" AS tipo
+');
+
+
+		$builder2->join('secado_detalle d', 'a.id_secado = d.id_secado', 'inner');
+		$builder2->join('secado_compra e', 'e.id_secado = d.id_secado', 'inner');
+		$builder2->join('compra c', 'c.id_compra = e.id_compra', 'inner');
+		$builder2->join('proveedor p', 'p.id_proveedor = c.id_proveedor', 'inner');
+		$builder2->where('a.estado', '0');
+		$builder2->groupBy('a.id_secado, a.fecha,  p.proveedor, a.total');
 
 
 
-		$builder = $this->db->table('compra_temp a');
-		$builder->select('a.*');
-		$builder->select('b.producto, b.id_categoria');
-		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
-		$builder->where('a.id_modulo', $post["id"]);
-		$query = $builder->get();
-		$data =  $query->getResultArray();
+		// Obtenemos el SQL sin ejecutar
+		$sql2 = $builder2->getCompiledSelect();
 
-		return $data;
+
+		// Unimos ambas con UNION ALL
+		$sql = "($sql1) UNION ALL ($sql2)";
+
+		// Ejecutamos la consulta final
+		$query = $this->db->query($sql);
+
+		// Obtenemos el resultado
+		return $query->getResult();
 	}
 	public function lista_detalle($id)
 	{
