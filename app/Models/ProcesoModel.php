@@ -14,18 +14,18 @@ class ProcesoModel extends Model
 		$builder1->select('
     a.id_compra, "Compra" as modulo,
     a.fecha, 
+	"" as operacion,
 	a.nro_comprobante,
     a.referencia, 
     p.proveedor, 
     a.total, 
-    SUM(d.cantidad) AS cantidad, 
-    "compra" AS tipo
+    SUM(d.cantidad) AS cantidad,
+	"I" as operacion
 ');
 		$builder1->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');
 		$builder1->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
 		$builder1->where('a.estado', '0');
 		$builder1->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total');
-
 		// Obtenemos el SQL sin ejecutar
 		$sql1 = $builder1->getCompiledSelect();
 
@@ -33,23 +33,27 @@ class ProcesoModel extends Model
 		$builder2 = $this->db->table('secado a');
 		$builder2->distinct();
 		$builder2->select('
-    a.id_secado AS id_compra, "Secado" as modulo,
+    a.id_secado AS id_compra,
+    "Secado" AS modulo,
     a.fecha, 
-	a.nro_comprobante,
+	a.operacion,
+    a.nro_comprobante,
     GROUP_CONCAT(DISTINCT c.referencia ORDER BY c.referencia SEPARATOR ", ") AS referencia,
-	GROUP_CONCAT(DISTINCT p.proveedor ORDER BY p.proveedor SEPARATOR ", ") AS proveedor,
+    GROUP_CONCAT(DISTINCT p.proveedor ORDER BY p.proveedor SEPARATOR ", ") AS proveedor,
     a.total, 
-    SUM(d.cantidad) AS cantidad, 
-    "secado" AS tipo
+    SUM(d.cantidad) AS cantidad,
+	a.operacion
 ');
 
-
 		$builder2->join('secado_detalle d', 'a.id_secado = d.id_secado', 'inner');
-		$builder2->join('secado_compra e', 'e.id_secado = d.id_secado', 'inner');
+		$builder2->join('secado_compra e', 'e.id_secado = a.id_secado', 'inner');
 		$builder2->join('compra c', 'c.id_compra = e.id_compra', 'inner');
 		$builder2->join('proveedor p', 'p.id_proveedor = c.id_proveedor', 'inner');
 		$builder2->where('a.estado', '0');
-		$builder2->groupBy('a.id_secado, a.fecha,  p.proveedor, a.total');
+
+		// ✅ Agrupas solo por los campos del secado
+		$builder2->groupBy('a.id_secado, a.fecha, a.nro_comprobante, a.total');
+
 
 
 
@@ -80,7 +84,7 @@ class ProcesoModel extends Model
 	}
 	public function buscar($post)
 	{
-		$builder = $this->db->table('secado a');
+		$builder = $this->db->table('proceso a');
 		$builder->select('a.*');
 
 		// Concatenar todos los nro_comprobante en una sola celda
@@ -89,14 +93,14 @@ class ProcesoModel extends Model
 		// Concatenar todos los proveedores en una sola celda
 		$builder->select("GROUP_CONCAT(b.proveedor SEPARATOR ', ') as proveedores");
 
-		$builder->join('secado_compra d', 'a.id_secado = d.id_secado', 'inner');
-		$builder->join('compra aa', 'aa.id_compra = d.id_compra', 'inner');
+		$builder->join('proceso_modulo d', 'a.id_proceso = d.id_proceso', 'inner');
+		$builder->join('compra aa', 'aa.id_compra = d.id_modulo AND d.modulo="Compra"', 'inner');
 		$builder->join('proveedor b', 'aa.id_proveedor = b.id_proveedor', 'inner');
 
 		$builder->where('a.fecha', $post["desde"]);
 
-		// Agrupar por id_secado para que no repita filas
-		$builder->groupBy('a.id_secado');
+		// Agrupar por id_proceso para que no repita filas
+		$builder->groupBy('a.id_proceso');
 		$builder->orderBy('a.fecha');
 
 		$query = $builder->get();
@@ -106,7 +110,7 @@ class ProcesoModel extends Model
 	{
 		$db = $this->db;
 
-		// --- Compras que NO están en secado_compra ---
+		// --- Compras que NO están en proceso_compra ---
 		$builder1 = $db->table('compra_detalle cd');
 		$builder1->select([
 			'c.fecha',
@@ -119,7 +123,7 @@ class ProcesoModel extends Model
 		]);
 		$builder1->join('compra c', 'c.id_compra = cd.id_compra', 'inner');
 		$builder1->join('producto p', 'p.id_producto = cd.id_producto', 'inner');
-		$builder1->join('secado_compra sc', 'sc.id_compra = c.id_compra', 'left');
+		$builder1->join('proceso_compra sc', 'sc.id_compra = c.id_compra', 'left');
 		$builder1->where('sc.id_compra  IS  NULL');
 		if (!empty($post['id'])) {
 			$builder1->where('cd.id_producto', $post['id']);
@@ -127,8 +131,8 @@ class ProcesoModel extends Model
 		$builder1->where('DATE(c.fecha) >=', $post['desde']);
 		$builder1->where('DATE(c.fecha) <=', $post['hasta']);
 
-		// --- Productos que retornaron del secado ---
-		$builder2 = $db->table('secado_detalle sd');
+		// --- Productos que retornaron del proceso ---
+		$builder2 = $db->table('proceso_detalle sd');
 		$builder2->select([
 			's.fecha',
 			'p.producto',
@@ -138,7 +142,7 @@ class ProcesoModel extends Model
 			'sd.cascara',
 			'sd.humedad'
 		]);
-		$builder2->join('secado s', 's.id_secado = sd.id_secado', 'inner');
+		$builder2->join('proceso s', 's.id_secado = sd.id_secado', 'inner');
 		$builder2->join('producto p', 'p.id_producto = sd.id_producto', 'inner');
 		$builder2->where('s.operacion', 'S');
 		if (!empty($post['id'])) {
@@ -157,7 +161,7 @@ class ProcesoModel extends Model
 
 	public function modulo($id)
 	{
-		$builder = $this->db->table('secado a');
+		$builder = $this->db->table('proceso a');
 		$builder->select('a.*');
 		$builder->select('b.proveedor, b.nro, c.simbolo');
 		$builder->select('d.id_credito');
@@ -172,24 +176,25 @@ class ProcesoModel extends Model
 		return $query->getRowArray();
 	}
 
-	public function secado_compra($id, $id_kardex, $compras)
+	public function proceso_compra_secado($id, $id_kardex, $compras)
 	{
 		$batch = [];
 		foreach ($compras as $row) {
 			$batch[] = [
-				'id_secado' => $id,
-				'id_compra' => $row['id_compra'],
+				'id_proceso' => $id,
+				'id_modulo' => $row['id_compra'],
 				'id_kardex' => $id_kardex,
+				'modulo' => $row['modulo'],
 			];
 		}
 
 
-		$builder = $this->db->table('secado_compra');
+		$builder = $this->db->table('proceso_modulo');
 		$builder->insertBatch($batch);
 	}
 	public function guardar($datos)
 	{
-		$builder = $this->db->table('secado');
+		$builder = $this->db->table('proceso');
 		$builder->insert($datos);
 		$id = $this->db->insertID();
 
@@ -219,15 +224,28 @@ class ProcesoModel extends Model
 		foreach ($compras as $detalle) {
 			if ($datos["operacion"] == "S") {
 				// Obtener detalle de cada compra
-				$detallesCompra = $this->db->table('compra_detalle')
-					->select('id_producto, cantidad, precio, total, rendimiento, cascara, humedad')
-					->where('id_compra', $detalle['id_compra'])
-					->get()
-					->getResultArray();
+				if ($detalle["modulo"] == "Compra") {
+					$detallesCompra = $this->db->table('compra_detalle')
+						->select('id_producto, cantidad, precio, total, rendimiento, cascara, humedad')
+						->where('id_compra', $detalle['id_compra'])
+						->get()
+						->getResultArray();
 
-				$db = $this->db->table('compra');
-				$db->where('id_compra',  $detalle['id_compra']);
-				$db->update(['estado' => '1']);
+					$db = $this->db->table('compra');
+					$db->where('id_compra',  $detalle['id_compra']);
+					$db->update(['estado' => '1']);
+				} else {
+					$detallesCompra = $this->db->table('secado_detalle')
+						->select('id_producto, cantidad, precio, total, rendimiento, cascara, humedad')
+						->where('id_secado', $detalle['id_compra'])
+						->get()
+						->getResultArray();
+
+					$db = $this->db->table('secado');
+					$db->where('id_secado',  $detalle['id_compra']);
+					$db->update(['estado' => '1']);
+				}
+
 
 				foreach ($detallesCompra as $dc) {
 					$kardexBatch[] = [
@@ -278,7 +296,7 @@ class ProcesoModel extends Model
 		$detalleBatch = [];
 		foreach ($detalle as $dc) {
 			$detalleBatch[] = [
-				'id_secado'   => $id,
+				'id_proceso'   => $id,
 				'id_producto' => $dc['id_producto'],
 				'cantidad'    => $dc['cantidad'],
 				'rendimiento'    => $dc['rendimiento'],
@@ -288,38 +306,16 @@ class ProcesoModel extends Model
 		}
 
 		if (!empty($detalleBatch)) {
-			$this->db->table('secado_detalle')->insertBatch($detalleBatch);
+			$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
 		}
 	}
-	public function modificar($id, $datos)
-	{
-		$db = $this->db->table('secado');
-		$db->where('id_secado', $id);
-		$db->update($datos);
-		$t = $this->db->affectedRows();
 
-		$datos_compra = array('id_compra' => $id);
-		$this->db->table('compra_detalle')->delete($datos_compra);
-
-		$this->db->query("
-  INSERT INTO compra_detalle (
-    id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
-  )
-  SELECT 
-    ? AS id_compra, id_producto, muestra, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, cantidad, precio, total
-  FROM compra_temp
-  WHERE id_modulo = ? AND id_usuario = ?", [$id, $id, $datos["id_usuario"]]);
-
-		return $t;
-	}
 
 	public function eliminar($data)
 	{
-		$builder = $this->db->table('secado_compra a');
+		$builder = $this->db->table('proceso_modulo a');
 		$builder->select('id_kardex');
-		$builder->where('id_secado', $data["id"]);
+		$builder->where('id_proceso', $data["id"]);
 		$query = $builder->get()->getRow();
 		$id_kardex = $query->id_kardex ?? "";;
 
@@ -339,25 +335,24 @@ class ProcesoModel extends Model
 		$productos = $this->db->query($sql, [$id_kardex])->getResultArray();
 
 
-
 		$datos_kardex = array('id_kardex' => $id_kardex);
-		$datos = array('id_secado' => $data["id"]);
+		$datos = array('id_proceso' => $data["id"]);
 		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
 		$query = $this->db->table('kardex')->delete($datos_kardex);
-		$query = $this->db->table('secado_compra')->delete($datos);
-		$query = $this->db->table('secado_detalle')->delete($datos);
+		$query = $this->db->table('proceso_modulo')->delete($datos);
+		$query = $this->db->table('proceso_detalle')->delete($datos);
 
 		$model_almacen = new AlmacenModel();
 		$model_almacen->restaurar_stock($id_kardex, $productos);
 
-		$query = $this->db->table('secado')->delete($datos);
+		$query = $this->db->table('proceso')->delete($datos);
 
 		return $query;
 	}
 	public function guardar_retorno($id_secado, $datos, $detalle)
 	{
 
-		$builder = $this->db->table('secado');
+		$builder = $this->db->table('proceso');
 		$builder->insert($datos);
 		$id = $this->db->insertID();
 
@@ -387,7 +382,7 @@ class ProcesoModel extends Model
 			$this->db->table('secado_detalle')->insertBatch($detalleBatch);
 
 			$totales = array("cantidad" => $cantidadTotal, "total" => $totalGeneral);
-			$db = $this->db->table('secado');
+			$db = $this->db->table('proceso');
 			$db->where('id_secado', $id);
 			$db->update($totales);
 		}

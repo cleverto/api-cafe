@@ -46,7 +46,17 @@ class Proceso extends BaseController
     private function valores($post)
     {
         $model = new FuncionesModel();
-        $nro_comprobante = $model->get_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+        $operacion = "S";
+
+        if ($post["operacion"] == "0") {
+            $id_tipo_comprobante = "94";
+            $nro_comprobante = $model->get_correlativo("1", "1",  $id_tipo_comprobante);
+        } else {
+            $id_tipo_comprobante = "95";
+            $nro_comprobante = $model->get_correlativo("1", "1",  $id_tipo_comprobante);
+            $operacion = "I";
+        }
+
 
         $id_usuario = session()->get("data")["id_usuario"];
 
@@ -55,8 +65,8 @@ class Proceso extends BaseController
             'id_sucursal' => "1",
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
-            'operacion' => "S",
-            'id_tipo_comprobante' => $post["id_tipo_comprobante"],
+            'operacion' => $operacion,
+            'id_tipo_comprobante' => $id_tipo_comprobante,
             'nro_comprobante' =>  $nro_comprobante,
             'fecha' => date('Y-m-d H:i:s'),
             'cantidad' => $post["qq"],
@@ -69,7 +79,6 @@ class Proceso extends BaseController
 
     private function valores_kardex($datos)
     {
-
         $data = array(
             'id_empresa'          => $datos["id_empresa"],
             'id_sucursal'         => $datos["id_sucursal"],
@@ -107,7 +116,7 @@ class Proceso extends BaseController
 
             $model->guardar_detalle($id, $detalleCompra);
 
-            $model->secado_compra($id, $id_kardex, $compras);
+            $model->proceso_compra_secado($id, $id_kardex, $compras);
 
             //actualizar stock
             $model_almacen = new AlmacenModel();
@@ -115,40 +124,6 @@ class Proceso extends BaseController
 
             // *********
             $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
-        } else {
-
-            $t = $model->modificar($post["idmodulo"], $datos);
-
-            //id kardex de kardex_compra
-            $id_kardex = $model->get_id_kardex($post["idmodulo"]);
-
-            //Guardar en kardex
-            $datos_kardex = $this->valores_kardex($datos);
-
-            $model_almacen = new AlmacenModel();
-            $model_almacen->modificar_kardex($id_kardex, $post["idmodulo"], $datos_kardex, "compra_temp");
-
-            // //actualizar stock 
-            // $model_almacen = new AlmacenModel();
-            // $model_almacen->actualizar_stock($id_kardex);
-
-            // // recupera id del credito
-            // $model_credito = new CreditoModel();
-            // $id_credito = $model_credito->get_id_by_compra($post["idmodulo"]);
-
-
-            // // actualiza el saldo del credito porque total puede cambiar
-            // $model_credito->set_Saldo(["id_credito" => $id_credito]);
-
-            // // elimina temp detalle
-            // //$model->eliminar_temp_by_id_modulo($post["idmodulo"]);
-
-
-            $rpta = array('rpta' => '1', 'msg' => "El registro no se puede modificar");
-            if ($t > 0) {
-
-                $rpta = array('rpta' => '1', 'msg' => "Modificado correctamente");
-            }
         }
 
         return $this->response->setJSON($rpta);

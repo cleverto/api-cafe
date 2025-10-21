@@ -64,7 +64,7 @@ class SecadoModel extends Model
 		$builder->join('compra aa', 'aa.id_compra = d.id_compra', 'inner');
 		$builder->join('proveedor b', 'aa.id_proveedor = b.id_proveedor', 'inner');
 
-		$builder->where('a.fecha', $post["desde"]);
+		$builder->where("a.fecha BETWEEN '{$post['desde']}' AND '{$post['hasta']}'");
 
 		// Agrupar por id_secado para que no repita filas
 		$builder->groupBy('a.id_secado');
@@ -146,12 +146,16 @@ class SecadoModel extends Model
 	public function secado_compra($id, $id_kardex, $compras)
 	{
 		$batch = [];
+		$idsAgregados = [];
 		foreach ($compras as $row) {
-			$batch[] = [
-				'id_secado' => $id,
-				'id_compra' => $row['id_compra'],
-				'id_kardex' => $id_kardex,
-			];
+			if (!in_array($row['id_compra'], $idsAgregados)) {
+				$batch[] = [
+					'id_secado' => $id,
+					'id_compra' => $row['id_compra'],
+					'id_kardex' => $id_kardex,
+				];
+				$idsAgregados[] = $row['id_compra']; // marca como agregado
+			}
 		}
 
 
@@ -213,6 +217,8 @@ class SecadoModel extends Model
 					$compraBatch[] = [
 						'id_producto' => $dc['id_producto'],
 						'cantidad'    => $dc['cantidad'],
+						'precio'    => $dc['precio'],
+						'total'    => $dc['total'],
 						'rendimiento'    => $dc['rendimiento'],
 						'cascara'    => $dc['cascara'],
 						'humedad'    => $dc['humedad'],
@@ -231,6 +237,8 @@ class SecadoModel extends Model
 				$compraBatch[] = [
 					'id_producto' => $detalle['id_producto'],
 					'cantidad'    => $detalle['cantidad'],
+					'precio'    => $detalle['precio'],
+					'total'    => $detalle['total'],
 					'rendimiento'    => $detalle['rendimiento'],
 					'cascara'    => $detalle['cascara'],
 					'humedad'    => $detalle['humedad'],
@@ -252,6 +260,8 @@ class SecadoModel extends Model
 				'id_secado'   => $id,
 				'id_producto' => $dc['id_producto'],
 				'cantidad'    => $dc['cantidad'],
+				'precio'    => $dc['precio'],
+				'total'    => $dc['total'],
 				'rendimiento'    => $dc['rendimiento'],
 				'cascara'    => $dc['cascara'],
 				'humedad'    => $dc['humedad'],
@@ -289,10 +299,18 @@ class SecadoModel extends Model
 	public function eliminar($data)
 	{
 		$builder = $this->db->table('secado_compra a');
-		$builder->select('id_kardex');
+		$builder->select('id_kardex, id_compra');
 		$builder->where('id_secado', $data["id"]);
 		$query = $builder->get()->getRow();
 		$id_kardex = $query->id_kardex ?? "";;
+		$compras = $builder->get()->getResultArray();
+
+
+		foreach ($compras as $detalle) {
+			$db = $this->db->table('compra');
+			$db->where('id_compra',  $detalle['id_compra']);
+			$db->update(['estado' => '0']);
+		}
 
 
 		$sql = "

@@ -186,6 +186,7 @@ class Secado extends BaseController
             'fecha' =>  $post["fecha"],
             'cantidad' => "0",
             'total' => "0",
+            'estado' => "0",
         );
 
         return $datos;
