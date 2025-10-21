@@ -116,7 +116,7 @@ class Proceso extends BaseController
 
             $model->guardar_detalle($id, $detalleCompra);
 
-            $model->proceso_compra_secado($id, $id_kardex, $compras);
+            $model->proceso_compra_secado_salida($id, $id_kardex, $compras);
 
             //actualizar stock
             $model_almacen = new AlmacenModel();
@@ -145,7 +145,7 @@ class Proceso extends BaseController
     private function valores_retorno($post)
     {
         $model = new FuncionesModel();
-        $nro_comprobante = $model->get_correlativo("1", "1", "93");
+        $nro_comprobante = $model->get_correlativo("1", "1", "95");
         $id_usuario = session()->get("data")["id_usuario"];
 
         $datos = array(
@@ -154,11 +154,12 @@ class Proceso extends BaseController
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
             'operacion' => "I",
-            'id_tipo_comprobante' => "93",
+            'id_tipo_comprobante' => "95",
             'nro_comprobante' =>  $nro_comprobante,
             'fecha' =>  $post["fecha"],
             'cantidad' => "0",
             'total' => "0",
+            'estado' => "0",
         );
 
         return $datos;
@@ -166,7 +167,7 @@ class Proceso extends BaseController
     public function guardar_retorno()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-
+        $id_proceso_salida = $post['id'];
         // Validar que exista información
         if (!isset($post['rowdata']) || empty($post['rowdata'])) {
             return $this->response->setJSON([
@@ -188,14 +189,15 @@ class Proceso extends BaseController
             $model_funciones = new FuncionesModel();
             $model_funciones->actualizar_correlativo("1", "1",  $datos["id_tipo_comprobante"]);
 
-
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
             list($id_kardex, $detalleCompra) = $model->guardar_kardex("RETORNO", $datos_kardex, $compras);
 
+
             $model->guardar_detalle($id, $detalleCompra);
 
-            $model->secado_compra($id, $id_kardex, $compras);
+
+            $model->proceso_compra_secado_ingreso($id, $id_kardex, $id_proceso_salida);
 
             //actualizar stock
             $model_almacen = new AlmacenModel();

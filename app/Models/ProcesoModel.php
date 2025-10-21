@@ -175,9 +175,9 @@ class ProcesoModel extends Model
 		$query = $builder->get();
 		return $query->getRowArray();
 	}
-
-	public function proceso_compra_secado($id, $id_kardex, $compras)
+	public function proceso_compra_secado_salida($id, $id_kardex, $compras)
 	{
+
 		$batch = [];
 		foreach ($compras as $row) {
 			$batch[] = [
@@ -185,6 +185,28 @@ class ProcesoModel extends Model
 				'id_modulo' => $row['id_compra'],
 				'id_kardex' => $id_kardex,
 				'modulo' => $row['modulo'],
+			];
+		}
+
+
+		$builder = $this->db->table('proceso_modulo');
+		$builder->insertBatch($batch);
+	}
+	public function proceso_compra_secado_ingreso($id, $id_kardex,$id_proceso_salida)
+	{
+
+		$detalles = $this->db->table('proceso_modulo')
+			->where('id_proceso', $id_proceso_salida)
+			->get()
+			->getResultArray();
+
+		$batch = [];
+		foreach ($detalles as $dc) {
+			$batch[] = [
+				'id_proceso'   => $id,
+				'id_kardex'   => $id_kardex,
+				'id_modulo' => $dc['id_modulo'],
+				'modulo'    => $dc['modulo'],
 			];
 		}
 
@@ -278,6 +300,8 @@ class ProcesoModel extends Model
 				$compraBatch[] = [
 					'id_producto' => $detalle['id_producto'],
 					'cantidad'    => $detalle['cantidad'],
+					'precio'    =>  $detalle['precio'],
+					'total'    =>  $detalle['total'],
 					'rendimiento'    => $detalle['rendimiento'],
 					'cascara'    => $detalle['cascara'],
 					'humedad'    => $detalle['humedad'],
@@ -362,9 +386,11 @@ class ProcesoModel extends Model
 		$detalleBatch = [];
 		foreach ($detalle as $dc) {
 			$detalleBatch[] = [
-				'id_secado'   => $id,
+				'id_proceso'   => $id,
 				'id_producto' => $dc['id_producto'],
 				'cantidad'    => $dc['cantidad'],
+				'precio'    => $dc['precio'],
+				'total'    => $dc['total'],
 				'rendimiento'    => $dc['rendimiento'],
 				'cascara'    => $dc['cascara'],
 				'humedad'    => $dc['humedad'],
@@ -379,11 +405,11 @@ class ProcesoModel extends Model
 
 
 		if (!empty($detalleBatch)) {
-			$this->db->table('secado_detalle')->insertBatch($detalleBatch);
+			$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
 
 			$totales = array("cantidad" => $cantidadTotal, "total" => $totalGeneral);
 			$db = $this->db->table('proceso');
-			$db->where('id_secado', $id);
+			$db->where('id_proceso', $id);
 			$db->update($totales);
 		}
 		return $id;
