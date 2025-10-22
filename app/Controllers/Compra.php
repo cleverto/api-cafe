@@ -245,6 +245,7 @@ class Compra extends BaseController
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
 
+
             $model_almacen = new AlmacenModel();
             $id_kardex = $model_almacen->guardar_kardex("", $datos_kardex, "compra_temp");
 
@@ -277,11 +278,14 @@ class Compra extends BaseController
             //$id_kardex = $model->get_id_kardex($post["idmodulo"]);
 
             //Guardar en kardex
+            $lista_detalle = $model->lista_detalle($id);
+
             $datos_kardex = $this->valores_kardex($datos);
 
 
             $model_almacen = new AlmacenModel();
             $model->eliminar_kardex($id);
+
             $id_kardex = $model_almacen->guardar_kardex($id, $datos_kardex, "compra_temp");
 
             //$id_kardex = $model_almacen->modificar_kardex($id_kardex, $id, $datos_kardex, "compra_temp");
@@ -290,6 +294,7 @@ class Compra extends BaseController
 
             //actualizar stock 
             $model_almacen = new AlmacenModel();
+            $model_almacen->restaurar_stock("",$lista_detalle);
             $model_almacen->actualizar_stock($id_kardex);
 
             // recupera id del credito

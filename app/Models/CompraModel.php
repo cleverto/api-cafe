@@ -95,8 +95,10 @@ class CompraModel extends Model
 	{
 		$builder = $this->db->table('compra_detalle a');
 		$builder->select('a.*');
+		$builder->select('c.id_empresa, c.id_sucursal, c.id_almacen');
 		$builder->select('b.producto, b.id_categoria');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
+		$builder->join('compra c', 'a.id_compra = c.id_compra', 'inner');
 		$builder->where('a.id_compra', $id);
 
 		$query = $builder->get();

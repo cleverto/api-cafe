@@ -211,7 +211,7 @@ class Secado extends BaseController
         // Insertar todos los registros de una vez
         $id = $model->guardar_retorno($post["id"], $datos, $compras);
         if ($id) {
-            $compras = $post["rowdata"];
+            
             // Actualizar correlativo
             $model_funciones = new FuncionesModel();
             $model_funciones->actualizar_correlativo("1", "1",  $datos["id_tipo_comprobante"]);
@@ -221,7 +221,7 @@ class Secado extends BaseController
             $datos_kardex = $this->valores_kardex($datos);
             list($id_kardex, $detalleCompra) = $model->guardar_kardex("RETORNO", $datos_kardex, $compras);
 
-            $model->guardar_detalle($id, $detalleCompra);
+            //$model->guardar_detalle($id, $detalleCompra);
 
             $model->secado_compra($id, $id_kardex, $compras);
 
