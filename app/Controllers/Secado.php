@@ -223,6 +223,8 @@ class Secado extends BaseController
 
             //$model->guardar_detalle($id, $detalleCompra);
 
+            $model->secado_retorno($id, $post["id"], $id_kardex);
+
             $model->secado_compra($id, $id_kardex, $compras);
 
             //actualizar stock

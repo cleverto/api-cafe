@@ -298,20 +298,33 @@ class SecadoModel extends Model
 
 	public function eliminar($data)
 	{
-		$builder = $this->db->table('secado_compra a');
-		$builder->select('id_kardex, id_compra');
-		$builder->where('id_secado', $data["id"]);
-		$query = $builder->get()->getRow();
-		$id_kardex = $query->id_kardex ?? "";;
-		$compras = $builder->get()->getResultArray();
+		if ($data['operacion'] == "S") {
+			$builder = $this->db->table('secado_compra a');
+			$builder->select('id_kardex, id_compra');
+			$builder->where('id_secado', $data["id"]);
+			$query = $builder->get()->getRow();
+			$id_kardex = $query->id_kardex ?? "";;
+			$compras = $builder->get()->getResultArray();
 
+			foreach ($compras as $detalle) {
+				$db = $this->db->table('compra');
+				$db->where('id_compra',  $detalle['id_compra']);
+				$db->update(['estado' => '0']);
+			}
+		} else {
+			$builder = $this->db->table('secado_retorno a');
+			$builder->select('id_kardex, id_secado');
+			$builder->where('id_retorno', $data["id"]);
+			$query = $builder->get()->getRow();
+			$compras = $builder->get()->getResultArray();
+			$id_kardex = $query->id_kardex ?? "";;
 
-		foreach ($compras as $detalle) {
-			$db = $this->db->table('compra');
-			$db->where('id_compra',  $detalle['id_compra']);
-			$db->update(['estado' => '0']);
+			foreach ($compras as $detalle) {
+				$db = $this->db->table('secado');
+				$db->where('id_secado',  $detalle['id_secado']);
+				$db->update(['estado' => '0']);
+			}
 		}
-
 
 		$sql = "
     SELECT 
@@ -335,6 +348,8 @@ class SecadoModel extends Model
 		$query = $this->db->table('kardex')->delete($datos_kardex);
 		$query = $this->db->table('secado_compra')->delete($datos);
 		$query = $this->db->table('secado_detalle')->delete($datos);
+		$query = $this->db->table('secado_retorno')->delete(['id_retorno' => $data["id"]]);
+
 
 		$model_almacen = new AlmacenModel();
 		$model_almacen->restaurar_stock($id_kardex, $productos);
@@ -343,12 +358,23 @@ class SecadoModel extends Model
 
 		return $query;
 	}
+	public function secado_retorno($id, $id_secado, $id_kardex)
+	{
+		$datos = ['id_retorno' => $id, 'id_secado' => $id_secado, 'id_kardex' => $id_kardex];
+		$builder = $this->db->table('secado_retorno');
+		$builder->insert($datos);
+		$id = $this->db->insertID();
+	}
 	public function guardar_retorno($id_secado, $datos, $detalle)
 	{
 
 		$builder = $this->db->table('secado');
 		$builder->insert($datos);
 		$id = $this->db->insertID();
+
+		$db = $this->db->table('secado');
+		$db->where('id_secado', $id_secado);
+		$db->update(['estado' => '1']);
 
 
 		$cantidadTotal = 0;
