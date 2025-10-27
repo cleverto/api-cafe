@@ -37,6 +37,7 @@ class SecadoModel extends Model
 
 		return $data;
 	}
+
 	public function lista_detalle($id)
 	{
 		$builder = $this->db->table('compra_detalle a');
@@ -49,6 +50,7 @@ class SecadoModel extends Model
 		$query = $builder->get();
 		return  $query->getResultArray();;
 	}
+
 	public function buscar($post)
 	{
 		$builder = $this->db->table('secado a');
@@ -385,6 +387,8 @@ class SecadoModel extends Model
 				'id_secado'   => $id,
 				'id_producto' => $dc['id_producto'],
 				'cantidad'    => $dc['cantidad'],
+				'precio'    => $dc['precio'],
+				'total'    => $dc['total'],
 				'rendimiento'    => $dc['rendimiento'],
 				'cascara'    => $dc['cascara'],
 				'humedad'    => $dc['humedad'],

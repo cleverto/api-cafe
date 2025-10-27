@@ -5,10 +5,10 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\AlmacenModel;
-use App\Models\ProcesoModel;
+use App\Models\VentaModel;
 use App\Models\FuncionesModel;
 
-class Proceso extends BaseController
+class Venta extends BaseController
 {
     public function __construct()
     {
@@ -17,7 +17,7 @@ class Proceso extends BaseController
     public function lista()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new ProcesoModel();
+        $model = new VentaModel();
         $data = $model->lista($post);
 
         $rpta = array('items' => $data);
@@ -27,7 +27,7 @@ class Proceso extends BaseController
     public function lista_detalle()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new ProcesoModel();
+        $model = new VentaModel();
         $data = $model->lista_detalle($post["id"]);
 
         $rpta = array('items' => $data);
@@ -36,7 +36,7 @@ class Proceso extends BaseController
     public function lista_detalle_salida()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new ProcesoModel();
+        $model = new VentaModel();
         $data = $model->lista_detalle_salida($post);
 
         $rpta = array('items' => $data);
@@ -45,7 +45,7 @@ class Proceso extends BaseController
     public function buscar()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new ProcesoModel();
+        $model = new VentaModel();
         $items = $model->buscar($post);
 
         $rpta = array('items' => $items);
@@ -110,7 +110,7 @@ class Proceso extends BaseController
         $compras = $post["compras"];
 
 
-        $model = new ProcesoModel();
+        $model = new VentaModel();
 
         $id = $model->guardar($datos, $compras);
 
@@ -141,7 +141,7 @@ class Proceso extends BaseController
     public function eliminar()
     {
         $post = json_decode(file_get_contents('php://input'), true);
-        $model = new ProcesoModel();
+        $model = new VentaModel();
         $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
         if ($t <= 0) {
@@ -187,7 +187,7 @@ class Proceso extends BaseController
         $datos = $this->valores_retorno($post);
 
         $compras = $post['rowdata'];
-        $model = new ProcesoModel();
+        $model = new VentaModel();
 
 
         // Insertar todos los registros de una vez

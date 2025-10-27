@@ -4,49 +4,80 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class ProcesoModel extends Model
+class VentaModel extends Model
 {
 
 	public function lista($post)
 	{
-		// Primera consulta (compra)
+		// --- CONSULTA 1: COMPRA ---
 		$builder1 = $this->db->table('compra a');
 		$builder1->select('
-    a.id_compra, "Compra" as modulo,
+    a.id_compra, 
+    "Compra" AS modulo,
     a.fecha, 
-	"" as operacion,
-	a.nro_comprobante,
+    "I" AS operacion,
+    a.nro_comprobante,
     a.referencia, 
     p.proveedor, 
     a.total, 
-    SUM(d.cantidad) AS cantidad,
-	"I" as operacion
+    SUM(d.cantidad) AS cantidad
 ');
 		$builder1->join('compra_detalle d', 'a.id_compra = d.id_compra', 'inner');
 		$builder1->join('proveedor p', 'p.id_proveedor = a.id_proveedor', 'inner');
 		$builder1->where('a.estado', '0');
-		$builder1->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total');
-		// Obtenemos el SQL sin ejecutar
+		$builder1->groupBy('a.id_compra, a.fecha, a.referencia, p.proveedor, a.total, a.nro_comprobante');
 		$sql1 = $builder1->getCompiledSelect();
 
-		// Segunda consulta (secado)
+
+		// --- CONSULTA 2: SECADO ---
 		$builder2 = $this->db->table('secado a');
 		$builder2->distinct();
-		$builder2->select(' a.id_secado AS id_compra, "Secado" AS modulo, a.fecha, a.operacion, a.nro_comprobante, GROUP_CONCAT(DISTINCT c.referencia ORDER BY c.referencia SEPARATOR ", ") AS referencia, GROUP_CONCAT(DISTINCT p.proveedor ORDER BY p.proveedor SEPARATOR ", ") AS proveedor, a.total, SUM(d.cantidad) AS cantidad, a.operacion ');
+		$builder2->select('
+    a.id_secado AS id_compra, 
+    "Secado" AS modulo, 
+    a.fecha, 
+    a.operacion, 
+    a.nro_comprobante, 
+    GROUP_CONCAT(DISTINCT c.referencia ORDER BY c.referencia SEPARATOR ", ") AS referencia, 
+    GROUP_CONCAT(DISTINCT p.proveedor ORDER BY p.proveedor SEPARATOR ", ") AS proveedor, 
+    a.total, 
+    SUM(d.cantidad) AS cantidad
+');
 		$builder2->join('secado_detalle d', 'a.id_secado = d.id_secado', 'inner');
 		$builder2->join('secado_compra e', 'e.id_secado = a.id_secado', 'inner');
 		$builder2->join('compra c', 'c.id_compra = e.id_compra', 'inner');
 		$builder2->join('proveedor p', 'p.id_proveedor = c.id_proveedor', 'inner');
 		$builder2->where('a.estado', '0');
-
-		$builder2->groupBy('a.id_secado, a.fecha, a.nro_comprobante, a.total');
-
-		// Obtenemos el SQL sin ejecutar
+		$builder2->groupBy('a.id_secado, a.fecha, a.nro_comprobante, a.total, a.operacion');
 		$sql2 = $builder2->getCompiledSelect();
 
 
-		// Unimos ambas con UNION ALL
-		$sql = "($sql1) UNION ALL ($sql2)";
+		// --- CONSULTA 3: PROCESO ---
+		$builder3 = $this->db->table('proceso a');
+		$builder3->select('
+    a.id_proceso AS id_compra,
+    "Proceso" AS modulo,
+    a.fecha,
+    a.operacion,
+    a.nro_comprobante,
+    GROUP_CONCAT(DISTINCT c.referencia ORDER BY c.referencia SEPARATOR ", ") AS referencia,
+    GROUP_CONCAT(DISTINCT p.proveedor ORDER BY p.proveedor SEPARATOR ", ") AS proveedor,
+    a.total,
+    SUM(d.cantidad) AS cantidad
+');
+		$builder3->join('proceso_modulo pm', 'pm.id_proceso = a.id_proceso', 'inner');
+		$builder3->join('compra c', 'c.id_compra = pm.id_modulo AND pm.modulo = "Compra"', 'inner');
+		$builder3->join('proveedor p', 'p.id_proveedor = c.id_proveedor', 'inner');
+		$builder3->join('proceso_detalle d', 'd.id_proceso = a.id_proceso', 'inner');
+		$builder3->where('a.estado', '0');
+		$builder3->where('a.operacion', 'I');
+		$builder3->groupBy('a.id_proceso, a.fecha, a.nro_comprobante, a.total, a.operacion');
+		$sql3 = $builder3->getCompiledSelect();
+
+
+		// --- UNIÓN FINAL ---
+		$sql = "($sql1) UNION ALL ($sql2) UNION ALL ($sql3)";
+
 
 		// Ejecutamos la consulta final
 		$query = $this->db->query($sql);

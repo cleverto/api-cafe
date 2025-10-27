@@ -26,6 +26,7 @@ class Secado extends BaseController
         $rpta = array('items' => $data, 'total' => $total);
         return $this->response->setJSON($rpta);
     }
+
     public function lista_detalle()
     {
         $post = json_decode(file_get_contents('php://input'), true);
@@ -71,7 +72,6 @@ class Secado extends BaseController
 
     private function valores_kardex($datos)
     {
-
         $data = array(
             'id_empresa'          => $datos["id_empresa"],
             'id_sucursal'         => $datos["id_sucursal"],
@@ -105,7 +105,8 @@ class Secado extends BaseController
 
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
-            list($id_kardex, $detalleCompra) = $model->guardar_kardex("SECADO", $datos_kardex, $compras);
+            list($id_kardex, $detalleCompra) = $model->guardar_kardex("Secado", $datos_kardex, $compras);
+
 
             $model->guardar_detalle($id, $detalleCompra);
 
@@ -211,7 +212,7 @@ class Secado extends BaseController
         // Insertar todos los registros de una vez
         $id = $model->guardar_retorno($post["id"], $datos, $compras);
         if ($id) {
-            
+
             // Actualizar correlativo
             $model_funciones = new FuncionesModel();
             $model_funciones->actualizar_correlativo("1", "1",  $datos["id_tipo_comprobante"]);
@@ -219,7 +220,7 @@ class Secado extends BaseController
 
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
-            list($id_kardex, $detalleCompra) = $model->guardar_kardex("RETORNO", $datos_kardex, $compras);
+            list($id_kardex, $detalleCompra) = $model->guardar_kardex("Secado", $datos_kardex, $compras);
 
             //$model->guardar_detalle($id, $detalleCompra);
 
