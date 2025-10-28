@@ -89,10 +89,10 @@ class FuncionesModel extends Model
             // Manejar el error de decodificación JSON
             $data = [];
             return $data;
-         } elseif (empty($datos['success']) || $datos['success'] === false) {
-            $data = [];
+         // } elseif (empty($datos['success']) || $datos['success'] === false) {
+         //    $data = [];
 
-            return $data;
+         //    return $data;
          } else {
 
 

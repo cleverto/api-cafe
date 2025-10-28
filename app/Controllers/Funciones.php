@@ -21,13 +21,14 @@ class Funciones extends BaseController
             $data = array(
                 'id_proveedor' => $row->id_proveedor,
                 'nombrecompleto' => $row->proveedor,
+                'direccion' => $row->direccion,
             );
             $rpta = array('rpta' => '1', 'items' => $data);
             return $this->response->setJSON($rpta);
         }
-
         $model = new FuncionesModel();
         $data = $model->get_dni_externo($post);
+
 
         if (empty($data)) {
             $data = $model->get_dni_sunat($post);

@@ -34,7 +34,7 @@ class ProveedorModel extends Model
 	public function get_by_dni($id)
 	{
 		$builder = $this->db->table('proveedor a');
-		$builder->select('a.proveedor, a.id_proveedor');
+		$builder->select('a.proveedor, a.id_proveedor, a.direccion');
 		$builder->where('a.nro', $id);
 
 		$query = $builder->get();
