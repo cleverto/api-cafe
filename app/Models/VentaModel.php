@@ -85,6 +85,75 @@ class VentaModel extends Model
 		// Obtenemos el resultado
 		return $query->getResult();
 	}
+	public function lista_detalle_guardar($data)
+	{
+		$resultados = [];
+
+		foreach ($data as $row) {
+			$modulo = $row['modulo'] ?? '';
+			$id = null;
+			$tabla = '';
+			$tabla_detalle = '';
+			$campo_id = '';
+
+			// Identificar módulo y sus tablas
+			switch ($modulo) {
+				case 'Compra':
+					$tabla = 'compra';
+					$tabla_detalle = 'compra_detalle';
+					$campo_id = 'id_compra';
+					$id = $row['id_compra'] ?? null;
+					break;
+
+				case 'Secado':
+					$tabla = 'secado';
+					$tabla_detalle = 'secado_detalle';
+					$campo_id = 'id_secado';
+					$id = $row['id_compra'] ?? null;
+					break;
+
+				case 'Proceso':
+					$tabla = 'proceso';
+					$tabla_detalle = 'proceso_detalle';
+					$campo_id = 'id_proceso';
+					$id = $row['id_compra'] ?? null;
+					break;
+
+				default:
+					continue 2; // módulo no reconocido
+			}
+
+			if ($id === null) continue;
+
+			// Consulta con Query Builder
+			$builder = $this->db->table("$tabla a");
+			$builder->select("
+			b.id_detalle,
+			a.$campo_id as id_compra,
+			'$modulo' as modulo,
+            b.id_producto,
+            p.producto,
+            b.cantidad,
+            b.precio as pa,
+			'0' as precio,
+            b.total
+        ");
+			$builder->join("$tabla_detalle b", "a.$campo_id = b.$campo_id");
+			$builder->join("producto p", "b.id_producto = p.id_producto", "inner");
+			$builder->where("a.$campo_id", $id);
+
+			$query = $builder->get();
+			$detalle = $query->getResultArray();
+
+			// Agregar todos los detalles directamente al array plano
+			foreach ($detalle as $d) {
+				$resultados[] = $d;
+			}
+		}
+
+		return $resultados;
+	}
+
 	public function lista_detalle($id)
 	{
 		$builder = $this->db->table('compra_detalle a');
@@ -231,21 +300,27 @@ class VentaModel extends Model
 		$query = $builder->get();
 		return $query->getRowArray();
 	}
-	public function proceso_compra_secado_salida($id, $id_kardex, $compras)
+	public function venta_relacionados_salida($id, $id_kardex, $compras)
 	{
 
 		$batch = [];
+		$ids_modulo_agregados = [];
 		foreach ($compras as $row) {
-			$batch[] = [
-				'id_proceso' => $id,
-				'id_modulo' => $row['id_compra'],
-				'id_kardex' => $id_kardex,
-				'modulo' => $row['modulo'],
-			];
+			// Evitar duplicado de id_modulo
+			if (!in_array($row['id_compra'], $ids_modulo_agregados)) {
+				$batch[] = [
+					'id_venta' => $id,
+					'id_modulo' => $row['id_compra'],
+					'id_kardex' => $id_kardex,
+					'modulo' => $row['modulo'],
+				];
+
+				// Marcar este id_compra como agregado
+				$ids_modulo_agregados[] = $row['id_compra'];
+			}
 		}
 
-
-		$builder = $this->db->table('proceso_modulo');
+		$builder = $this->db->table('venta_modulo');
 		$builder->insertBatch($batch);
 	}
 	public function proceso_compra_secado_ingreso($id, $id_kardex, $id_proceso_salida)
@@ -271,7 +346,7 @@ class VentaModel extends Model
 	}
 	public function guardar($datos)
 	{
-		$builder = $this->db->table('proceso');
+		$builder = $this->db->table('venta');
 		$builder->insert($datos);
 		$id = $this->db->insertID();
 
@@ -285,7 +360,7 @@ class VentaModel extends Model
 			'id_almacen'          => $datos["id_almacen"],
 			'id_usuario'          => $datos["id_usuario"],
 			'id_tipo_comprobante' => $datos["id_tipo_comprobante"],
-			'operacion'           => $datos["operacion"],   // entrada o salida
+			'operacion'           => "S",
 			'motivo'              => $motivo,
 			'fecha'               => $datos["fecha"],
 			'nro_comprobante'     => $datos["nro_comprobante"],
@@ -297,82 +372,25 @@ class VentaModel extends Model
 		// 3. A partir de las compras activas, insertar en kardex_detalle
 		$kardexBatch = [];
 		$compraBatch = [];
-		foreach ($compras as $detalle) {
-			if ($datos["operacion"] == "S") {
-				// Obtener detalle de cada compra
-				if ($detalle["modulo"] == "Compra") {
-					$detallesCompra = $this->db->table('compra_detalle')
-						->select('id_producto, cantidad, precio, total, rendimiento, cascara, humedad')
-						->where('id_compra', $detalle['id_compra'])
-						->get()
-						->getResultArray();
 
-					$db = $this->db->table('compra');
-					$db->where('id_compra',  $detalle['id_compra']);
-					$db->update(['estado' => '1']);
-				} else {
-					$detallesCompra = $this->db->table('secado_detalle')
-						->select('id_producto, cantidad, precio, total, rendimiento, cascara, humedad')
-						->where('id_secado', $detalle['id_compra'])
-						->get()
-						->getResultArray();
-
-					$db = $this->db->table('secado');
-					$db->where('id_secado',  $detalle['id_compra']);
-					$db->update(['estado' => '1']);
-				}
-
-				if ($detalle["modulo"] == "Compra") {
-					$db = $this->db->table('compra');
-					$db->where('id_compra',  $detalle['id_compra']);
-					$db->update(['estado' => '1']);
-				} else {
-					$db = $this->db->table('Secado');
-					$db->where('id_secado',  $detalle['id_compra']);
-					$db->update(['estado' => '1']);
-				}
-
-				foreach ($detallesCompra as $dc) {
-					$kardexBatch[] = [
-						'id_kardex'   => $id_kardex,
-						'id_producto' => $dc['id_producto'],
-						'cantidad'    => $dc['cantidad'],
-						'precio'    =>  $dc['precio'],
-						'total'    =>  $dc['total'],
-					];
-				}
-				foreach ($detallesCompra as $dc) {
-					$compraBatch[] = [
-						'id_producto' => $dc['id_producto'],
-						'cantidad'    => $dc['cantidad'],
-						'precio'    =>  $dc['precio'],
-						'total'    =>  $dc['total'],
-						'rendimiento'    => $dc['rendimiento'],
-						'cascara'    => $dc['cascara'],
-						'humedad'    => $dc['humedad'],
-					];
-				}
-			} else {
-
-				$kardexBatch[] = [
-					'id_kardex'   => $id_kardex,
-					'id_producto' => $detalle['id_producto'],
-					'cantidad'    => $detalle['cantidad'],
-					'precio'    =>  $detalle['precio'],
-					'total'    =>  $detalle['total'],
-				];
-
-				$compraBatch[] = [
-					'id_producto' => $detalle['id_producto'],
-					'cantidad'    => $detalle['cantidad'],
-					'precio'    =>  $detalle['precio'],
-					'total'    =>  $detalle['total'],
-					'rendimiento'    => $detalle['rendimiento'],
-					'cascara'    => $detalle['cascara'],
-					'humedad'    => $detalle['humedad'],
-				];
-			}
+		foreach ($compras as $dc) {
+			$kardexBatch[] = [
+				'id_kardex'   => $id_kardex,
+				'id_producto' => $dc['id_producto'],
+				'cantidad'    => $dc['cantidad'],
+				'precio'    =>  $dc['precio'],
+				'total'    =>  $dc['total'],
+			];
 		}
+		foreach ($compras as $dc) {
+			$compraBatch[] = [
+				'id_producto' => $dc['id_producto'],
+				'cantidad'    => $dc['cantidad'],
+				'precio'    =>  $dc['precio'],
+				'total'    =>  $dc['total'],
+			];
+		}
+
 
 		if (!empty($kardexBatch)) {
 			$this->db->table('kardex_detalle')->insertBatch($kardexBatch);
@@ -385,19 +403,19 @@ class VentaModel extends Model
 		$detalleBatch = [];
 		foreach ($detalle as $dc) {
 			$detalleBatch[] = [
-				'id_proceso'   => $id,
+				'id_venta'   => $id,
 				'id_producto' => $dc['id_producto'],
 				'cantidad'    => $dc['cantidad'],
 				'precio'    => $dc['precio'],
 				'total'    => $dc['total'],
-				'rendimiento'    => $dc['rendimiento'],
-				'cascara'    => $dc['cascara'],
-				'humedad'    => $dc['humedad'],
+				// 'rendimiento'    => $dc['rendimiento'],
+				// 'cascara'    => $dc['cascara'],
+				// 'humedad'    => $dc['humedad'],
 			];
 		}
 
 		if (!empty($detalleBatch)) {
-			$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
+			$this->db->table('venta_detalle')->insertBatch($detalleBatch);
 		}
 	}
 

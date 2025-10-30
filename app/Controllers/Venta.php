@@ -23,7 +23,15 @@ class Venta extends BaseController
         $rpta = array('items' => $data);
         return $this->response->setJSON($rpta);
     }
+    public function lista_detalle_guardar()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new VentaModel();
+        $data = $model->lista_detalle_guardar($post["rowData"]);
 
+        $rpta = array('items' => $data);
+        return $this->response->setJSON($rpta);
+    }
     public function lista_detalle()
     {
         $post = json_decode(file_get_contents('php://input'), true);
@@ -56,25 +64,19 @@ class Venta extends BaseController
     {
         $model = new FuncionesModel();
 
-
-        if ($post["operacion"] == "S") {
-            $id_tipo_comprobante = "94";
-            $nro_comprobante = $model->get_correlativo("1", "1",  $id_tipo_comprobante);
-        } else {
-            $id_tipo_comprobante = "95";
-            $nro_comprobante = $model->get_correlativo("1", "1",  $id_tipo_comprobante);
-        }
+        $id_tipo_comprobante = "00";
+        $nro_comprobante = $model->get_correlativo("1", "1",  $id_tipo_comprobante);
 
 
         $id_usuario = session()->get("data")["id_usuario"];
-
         $datos = array(
             'id_empresa' => "1",
             'id_sucursal' => "1",
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
-            'operacion' => $post["operacion"],
+            // 'operacion' => $post["operacion"],
             'id_tipo_comprobante' => $id_tipo_comprobante,
+            'id_proveedor' => $id_tipo_comprobante,
             'nro_comprobante' =>  $nro_comprobante,
             'fecha' => date('Y-m-d H:i:s'),
             'cantidad' => $post["qq"],
@@ -93,7 +95,7 @@ class Venta extends BaseController
             'id_almacen'          => $datos["id_almacen"],
             'id_usuario'          => $datos["id_usuario"],
             'id_tipo_comprobante' => $datos["id_tipo_comprobante"],
-            'operacion' => $datos["operacion"],
+            'operacion' => "S",
             'nro_comprobante' => $datos["nro_comprobante"],
             'motivo' => "Procesar",
             'fecha' => $datos["fecha"],
@@ -109,7 +111,6 @@ class Venta extends BaseController
         $datos = $datos[0];
         $compras = $post["compras"];
 
-
         $model = new VentaModel();
 
         $id = $model->guardar($datos, $compras);
@@ -121,11 +122,11 @@ class Venta extends BaseController
         //Guardar en kardex
         $datos_kardex = $this->valores_kardex($datos);
 
-        list($id_kardex, $detalleCompra) = $model->guardar_kardex("Procesar", $datos_kardex, $compras);
+        list($id_kardex, $detalleCompra) = $model->guardar_kardex("Venta", $datos_kardex, $compras);
 
         $model->guardar_detalle($id, $detalleCompra);
 
-        $model->proceso_compra_secado_salida($id, $id_kardex, $compras);
+        $model->venta_relacionados_salida($id, $id_kardex, $compras);
 
         //actualizar stock
         $model_almacen = new AlmacenModel();
