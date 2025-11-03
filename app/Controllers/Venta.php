@@ -64,7 +64,7 @@ class Venta extends BaseController
     {
         $model = new FuncionesModel();
 
-        $id_tipo_comprobante = "00";
+        $id_tipo_comprobante = "99";
         $nro_comprobante = $model->get_correlativo("1", "1",  $id_tipo_comprobante);
 
 
@@ -78,6 +78,7 @@ class Venta extends BaseController
             'id_tipo_comprobante' => $id_tipo_comprobante,
             'id_proveedor' => $id_tipo_comprobante,
             'nro_comprobante' =>  $nro_comprobante,
+            'referencia' =>  $post["referencia"],
             'fecha' => date('Y-m-d H:i:s'),
             'cantidad' => $post["qq"],
             'total' => $post["total"],
@@ -152,77 +153,4 @@ class Venta extends BaseController
         return $this->response->setJSON($rpta);
     }
 
-    private function valores_retorno($post)
-    {
-        $model = new FuncionesModel();
-        $nro_comprobante = $model->get_correlativo("1", "1", "95");
-        $id_usuario = session()->get("data")["id_usuario"];
-
-        $datos = array(
-            'id_empresa' => "1",
-            'id_sucursal' => "1",
-            'id_almacen' => "1",
-            'id_usuario' => $id_usuario,
-            'operacion' => "I",
-            'id_tipo_comprobante' => "95",
-            'nro_comprobante' =>  $nro_comprobante,
-            'fecha' =>  $post["fecha"],
-            'cantidad' => "0",
-            'total' => "0",
-            'estado' => "0",
-        );
-
-        return $datos;
-    }
-    public function guardar_retorno()
-    {
-        $post = json_decode(file_get_contents('php://input'), true);
-        $idModulo = $post['id'];
-        // Validar que exista información
-        if (!isset($post['rowdata']) || empty($post['rowdata'])) {
-            return $this->response->setJSON([
-                'rpta'  => '0',
-                'msg' => 'No se recibió información válida.'
-            ]);
-        }
-        $datos = $this->valores_retorno($post);
-
-        $compras = $post['rowdata'];
-        $model = new VentaModel();
-
-
-        // Insertar todos los registros de una vez
-        $id = $model->guardar_retorno($idModulo, $datos, $compras);
-        if ($id) {
-            //$compras = $post["rowdata"];
-            // Actualizar correlativo
-            $model_funciones = new FuncionesModel();
-            $model_funciones->actualizar_correlativo("1", "1",  $datos["id_tipo_comprobante"]);
-
-            //Guardar en kardex
-            $datos_kardex = $this->valores_kardex($datos);
-            list($id_kardex, $detalleCompra) = $model->guardar_kardex("Procesar", $datos_kardex, $compras);
-
-            $model->proceso_retorno($id, $idModulo, $id_kardex);
-
-            $model->guardar_detalle($id, $detalleCompra);
-
-
-            $model->proceso_compra_secado_ingreso($id, $id_kardex, $idModulo);
-
-            //actualizar stock
-            $model_almacen = new AlmacenModel();
-            $model_almacen->actualizar_stock($id_kardex);
-
-            return $this->response->setJSON([
-                'rpta'  => '1',
-                'msg' => 'Datos guardados correctamente.'
-            ]);
-        } else {
-            return $this->response->setJSON([
-                'rpta'  => '0',
-                'msg' => 'No se pudo guardar la información.'
-            ]);
-        }
-    }
 }

@@ -42,7 +42,7 @@ class SecadoModel extends Model
 	{
 		$builder = $this->db->table('compra_detalle a');
 		$builder->select('a.*');
-		$builder->select('a.id_compra_detalle as id_detalle, b.producto, b.id_categoria, d.id_secado');
+		$builder->select('a.id_detalle as id_detalle, b.producto, b.id_categoria, d.id_secado');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
 		$builder->join('secado_compra d', 'a.id_compra = d.id_compra', 'inner');
 		$builder->where('d.id_secado', $id);

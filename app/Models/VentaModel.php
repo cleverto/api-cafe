@@ -66,15 +66,23 @@ class VentaModel extends Model
     SUM(d.cantidad) AS cantidad
 ');
 		$builder3->join('proceso_modulo pm', 'pm.id_proceso = a.id_proceso', 'inner');
-		$builder3->join('compra c', 'c.id_compra = pm.id_modulo AND pm.modulo = "Compra"', 'inner');
-		$builder3->join('proveedor p', 'p.id_proveedor = c.id_proveedor', 'inner');
+
+		// 🔹 si el proceso está relacionado a Compra
+		$builder3->join('compra c', 'c.id_compra = pm.id_modulo AND pm.modulo = "Compra"', 'left');
+
+		// 🔹 si el proceso está relacionado a Secado
+		$builder3->join('secado s', 's.id_secado = pm.id_modulo AND pm.modulo = "Secado"', 'left');
+		$builder3->join('secado_compra sc', 'sc.id_secado = s.id_secado', 'left');
+		$builder3->join('compra c2', 'c2.id_compra = sc.id_compra', 'left');
+
+		// 🔹 tomar proveedor tanto de compra directa como de la compra asociada al secado
+		$builder3->join('proveedor p', 'p.id_proveedor = COALESCE(c.id_proveedor, c2.id_proveedor)', 'left');
+
 		$builder3->join('proceso_detalle d', 'd.id_proceso = a.id_proceso', 'inner');
 		$builder3->where('a.estado', '0');
 		$builder3->where('a.operacion', 'I');
 		$builder3->groupBy('a.id_proceso, a.fecha, a.nro_comprobante, a.total, a.operacion');
 		$sql3 = $builder3->getCompiledSelect();
-
-
 		// --- UNIÓN FINAL ---
 		$sql = "($sql1) UNION ALL ($sql2) UNION ALL ($sql3)";
 
@@ -158,7 +166,7 @@ class VentaModel extends Model
 	{
 		$builder = $this->db->table('compra_detalle a');
 		$builder->select('a.*');
-		$builder->select('a.id_compra_detalle as id_detalle, b.producto, b.id_categoria, d.id_secado');
+		$builder->select('a.id_detalle as id_detalle, b.producto, b.id_categoria, d.id_secado');
 		$builder->join('producto b', 'a.id_producto = b.id_producto', 'inner');
 		$builder->join('secado_compra d', 'a.id_compra = d.id_compra', 'inner');
 		$builder->where('d.id_secado', $id);
@@ -179,58 +187,61 @@ class VentaModel extends Model
 	}
 	public function buscar($post)
 	{
-
-		// Concatenar los nro_comprobante de compra o secado según el módulo
-		$builder = $this->db->table('proceso a');
+		$builder = $this->db->table('venta a');
 		$builder->select('a.*');
 
-		// nro_comprobante según el módulo (Compra o Secado)
+		// nro_comprobante según el módulo (Compra, Secado, Proceso)
 		$builder->select("
-    GROUP_CONCAT(
-        CASE 
-            WHEN d.modulo = 'Compra' THEN c.nro_comprobante
-            WHEN d.modulo = 'Secado' THEN s.nro_comprobante
-        END SEPARATOR ', '
-    ) AS referencia
-");
+        GROUP_CONCAT(
+            CASE 
+                WHEN d.modulo = 'Compra' THEN c.nro_comprobante
+                WHEN d.modulo = 'Secado' THEN s.nro_comprobante
+                WHEN d.modulo = 'Proceso' THEN pr.nro_comprobante
+            END SEPARATOR ', '
+        ) AS referencia
+    ");
 
 		// proveedor según el módulo
 		// Compra → proveedor directo
 		// Secado → proveedor de la compra asociada vía secado_compra
+		// Proceso → no tiene proveedor
 		$builder->select("
-    GROUP_CONCAT(
-        CASE 
-            WHEN d.modulo = 'Compra' THEN p.proveedor
-            WHEN d.modulo = 'Secado' THEN ps.proveedor
-        END SEPARATOR ', '
-    ) AS proveedores
-");
+        GROUP_CONCAT(
+            CASE 
+                WHEN d.modulo = 'Compra' THEN p.proveedor
+                WHEN d.modulo = 'Secado' THEN ps.proveedor
+                WHEN d.modulo = 'Proceso' THEN ''
+            END SEPARATOR ', '
+        ) AS proveedores
+    ");
 
-		$builder->join('proceso_modulo d', 'a.id_proceso = d.id_proceso', 'inner');
+		// Relaciones principales
+		$builder->join('venta_modulo d', 'a.id_venta = d.id_venta', 'inner');
 
-		// JOIN para Compra
+		// Compra
 		$builder->join('compra c', 'c.id_compra = d.id_modulo AND d.modulo="Compra"', 'left');
 		$builder->join('proveedor p', 'p.id_proveedor = c.id_proveedor', 'left');
 
-		// JOIN para Secado
+		// Secado
 		$builder->join('secado s', 's.id_secado = d.id_modulo AND d.modulo="Secado"', 'left');
-
-		// Relación Secado → Compra → Proveedor
 		$builder->join('secado_compra sc', 'sc.id_secado = s.id_secado', 'left');
 		$builder->join('compra cs', 'cs.id_compra = sc.id_compra', 'left');
 		$builder->join('proveedor ps', 'ps.id_proveedor = cs.id_proveedor', 'left');
 
+		// Proceso (sin proveedor)
+		$builder->join('proceso pr', 'pr.id_proceso = d.id_modulo AND d.modulo="Proceso"', 'left');
+		$builder->join('proceso_detalle prd', 'prd.id_proceso = pr.id_proceso', 'left'); // opcional, si necesitas acceder a productos
+
+		// Filtro de fechas
 		$builder->where("a.fecha BETWEEN '{$post['desde']}' AND '{$post['hasta']}'");
 
-		$builder->groupBy('a.id_proceso');
+		$builder->groupBy('a.id_venta');
 		$builder->orderBy('a.fecha');
 
-
-
 		$query = $builder->get();
-
 		return $query->getResultArray();
 	}
+
 	public function filtro_compras($post)
 	{
 		$db = $this->db;
@@ -370,6 +381,33 @@ class VentaModel extends Model
 		$id_kardex = $this->db->insertID();
 
 		// 3. A partir de las compras activas, insertar en kardex_detalle
+
+
+		$ids_modulo_agregados = [];
+		foreach ($compras as $row) {
+			// Evitar duplicado de id_modulo
+			if (!in_array($row['id_compra'], $ids_modulo_agregados)) {
+				if ($row["modulo"] = "compra") {
+					$db = $this->db->table('compra');
+					$db->where('id_compra',  $row['id_compra']);
+					$db->update(['estado' => '1']);
+				}
+				if ($row["modulo"] = "secado") {
+					$db = $this->db->table('secado');
+					$db->where('id_secado',  $row['id_compra']);
+					$db->update(['estado' => '1']);
+				}
+				if ($row["modulo"] = "proceso") {
+					$db = $this->db->table('proceso');
+					$db->where('id_proceso',  $row['id_compra']);
+					$db->update(['estado' => '1']);
+				}
+				// Marcar este id_compra como agregado
+				$ids_modulo_agregados[] = $row['id_compra'];
+			}
+		}
+
+
 		$kardexBatch = [];
 		$compraBatch = [];
 
@@ -422,54 +460,51 @@ class VentaModel extends Model
 
 	public function eliminar($data)
 	{
+		$builder = $this->db->table('venta_modulo a');
+		$builder->select('id_kardex, id_modulo');
+		$builder->where('id_modulo', $data["id"]);
+		$builder->where('modulo', "Compra");
+		$query = $builder->get()->getRow();
+		$id_kardex = $query->id_kardex ?? "";;
+		$compras = $builder->get()->getResultArray();
 
-		if ($data['operacion'] == "S") {
-			$builder = $this->db->table('proceso_modulo a');
-			$builder->select('id_kardex, id_modulo');
-			$builder->where('id_modulo', $data["id"]);
-			$builder->where('modulo', "Compra");
-			$query = $builder->get()->getRow();
-			$id_kardex = $query->id_kardex ?? "";;
-			$compras = $builder->get()->getResultArray();
-
-			foreach ($compras as $detalle) {
-				$db = $this->db->table('compra');
-				$db->where('id_compra',  $detalle['id_modulo']);
-				$db->update(['estado' => '0']);
-			}
-
-			$builder = $this->db->table('proceso_modulo a');
-			$builder->select('id_kardex, id_modulo');
-			$builder->where('id_modulo', $data["id"]);
-			$builder->where('modulo', "Secado");
-			$query = $builder->get()->getRow();
-			$id_kardex = $query->id_kardex ?? "";;
-			$compras = $builder->get()->getResultArray();
-
-			foreach ($compras as $detalle) {
-				$db = $this->db->table('secado');
-				$db->where('id_secado',  $detalle['id_modulo']);
-				$db->update(['estado' => '0']);
-			}
-		} else {
-			$builder = $this->db->table('proceso_retorno a');
-			$builder->select('id_kardex, id_proceso');
-			$builder->where('id_proceso', $data["id"]);
-			$query = $builder->get()->getRow();
-			$compras = $builder->get()->getResultArray();
-			$id_kardex = $query->id_kardex ?? "";;
-
-			foreach ($compras as $detalle) {
-				$db = $this->db->table('proceso');
-				$db->where('id_proceso',  $detalle['id_proceso']);
-				$db->update(['estado' => '0']);
-			}
+		foreach ($compras as $detalle) {
+			$db = $this->db->table('compra');
+			$db->where('id_compra',  $detalle['id_modulo']);
+			$db->update(['estado' => '0']);
 		}
 
+		$builder = $this->db->table('venta_modulo a');
+		$builder->select('id_kardex, id_modulo');
+		$builder->where('id_modulo', $data["id"]);
+		$builder->where('modulo', "Secado");
+		$query = $builder->get()->getRow();
+		$id_kardex = $query->id_kardex ?? "";;
+		$compras = $builder->get()->getResultArray();
 
-		$builder = $this->db->table('proceso_modulo a');
+		foreach ($compras as $detalle) {
+			$db = $this->db->table('secado');
+			$db->where('id_secado',  $detalle['id_modulo']);
+			$db->update(['estado' => '0']);
+		}
+
+		$builder = $this->db->table('venta_modulo a');
+		$builder->select('id_kardex, id_modulo');
+		$builder->where('id_modulo', $data["id"]);
+		$builder->where('modulo', "proceso");
+		$query = $builder->get()->getRow();
+		$id_kardex = $query->id_kardex ?? "";;
+		$compras = $builder->get()->getResultArray();
+
+		foreach ($compras as $detalle) {
+			$db = $this->db->table('proceso');
+			$db->where('id_proceso',  $detalle['id_modulo']);
+			$db->update(['estado' => '0']);
+		}
+
+		$builder = $this->db->table('venta_modulo a');
 		$builder->select('id_kardex');
-		$builder->where('id_proceso', $data["id"]);
+		$builder->where('id_venta', $data["id"]);
 		$query = $builder->get()->getRow();
 		$id_kardex = $query->id_kardex ?? "";;
 
@@ -480,7 +515,6 @@ class VentaModel extends Model
         k.id_sucursal,
         k.id_almacen,
         d.id_producto,
-        k.operacion,
         d.cantidad
     FROM kardex k
     JOIN kardex_detalle d ON k.id_kardex = d.id_kardex
@@ -490,17 +524,16 @@ class VentaModel extends Model
 
 
 		$datos_kardex = array('id_kardex' => $id_kardex);
-		$datos = array('id_proceso' => $data["id"]);
+		$datos = array('id_venta' => $data["id"]);
 		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
 		$query = $this->db->table('kardex')->delete($datos_kardex);
-		$query = $this->db->table('proceso_modulo')->delete($datos);
-		$query = $this->db->table('proceso_detalle')->delete($datos);
-		$query = $this->db->table('proceso_retorno')->delete(['id_retorno' => $data["id"]]);
+		$query = $this->db->table('venta_modulo')->delete($datos);
+		$query = $this->db->table('venta_detalle')->delete($datos);
 
 		$model_almacen = new AlmacenModel();
 		$model_almacen->restaurar_stock($id_kardex, $productos);
 
-		$query = $this->db->table('proceso')->delete($datos);
+		$query = $this->db->table('venta')->delete($datos);
 
 		return $query;
 	}
