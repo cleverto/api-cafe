@@ -242,55 +242,104 @@ class VentaModel extends Model
 		return $query->getResultArray();
 	}
 
-	public function filtro_compras($post)
+	public function filtro_trazabilidad($post)
 	{
 		$db = $this->db;
 
-		// --- Compras que NO están en proceso_compra ---
+		// === 🟢 COMPRA ===
 		$builder1 = $db->table('compra_detalle cd');
 		$builder1->select([
 			'c.fecha',
 			'p.producto',
-			'"Compra" AS operacion',
+			'"COMPRA" AS etapa',
 			'cd.cantidad',
 			'cd.rendimiento',
 			'cd.cascara',
-			'cd.humedad'
+			'cd.humedad',
+			'c.nro_comprobante AS comprobante',
+			'prv.proveedor AS referencia'
 		]);
 		$builder1->join('compra c', 'c.id_compra = cd.id_compra', 'inner');
+		$builder1->join('proveedor prv', 'prv.id_proveedor = c.id_proveedor', 'left');
 		$builder1->join('producto p', 'p.id_producto = cd.id_producto', 'inner');
-		$builder1->join('proceso_compra sc', 'sc.id_compra = c.id_compra', 'left');
-		$builder1->where('sc.id_compra  IS  NULL');
 		if (!empty($post['id'])) {
 			$builder1->where('cd.id_producto', $post['id']);
 		}
 		$builder1->where('DATE(c.fecha) >=', $post['desde']);
 		$builder1->where('DATE(c.fecha) <=', $post['hasta']);
 
-		// --- Productos que retornaron del proceso ---
-		$builder2 = $db->table('proceso_detalle sd');
+		// === 🟡 SECADO ===
+		$builder2 = $db->table('secado_detalle sd');
 		$builder2->select([
 			's.fecha',
 			'p.producto',
-			'"Secado" AS operacion',
+			'"SECADO" AS etapa',
 			'sd.cantidad',
 			'sd.rendimiento',
 			'sd.cascara',
-			'sd.humedad'
+			'sd.humedad',
+			's.nro_comprobante AS comprobante',
+			'c.nro_comprobante AS referencia'
 		]);
-		$builder2->join('proceso s', 's.id_secado = sd.id_secado', 'inner');
+		$builder2->join('secado s', 's.id_secado = sd.id_secado', 'inner');
 		$builder2->join('producto p', 'p.id_producto = sd.id_producto', 'inner');
-		$builder2->where('s.operacion', 'S');
+		$builder2->join('secado_compra sc', 'sc.id_secado = s.id_secado', 'left');
+		$builder2->join('compra c', 'c.id_compra = sc.id_compra', 'left');
 		if (!empty($post['id'])) {
 			$builder2->where('sd.id_producto', $post['id']);
 		}
 		$builder2->where('DATE(s.fecha) >=', $post['desde']);
 		$builder2->where('DATE(s.fecha) <=', $post['hasta']);
 
-		// --- Unir ambas consultas ---
-		$builder1->unionAll($builder2);
+		// === 🔵 PROCESO ===
+		$builder3 = $db->table('proceso_detalle pd');
+		$builder3->select([
+			'pr.fecha',
+			'p.producto',
+			'"PROCESO" AS etapa',
+			'pd.cantidad',
+			'pd.rendimiento',
+			'pd.cascara',
+			'pd.humedad',
+			'pr.nro_comprobante AS comprobante',
+			's.nro_comprobante AS referencia'
+		]);
+		$builder3->join('proceso pr', 'pr.id_proceso = pd.id_proceso', 'inner');
+		$builder3->join('producto p', 'p.id_producto = pd.id_producto', 'inner');
+		$builder3->join('secado s', 's.id_secado = pr.id_secado', 'left'); // si el proceso proviene de un secado
+		if (!empty($post['id'])) {
+			$builder3->where('pd.id_producto', $post['id']);
+		}
+		$builder3->where('DATE(pr.fecha) >=', $post['desde']);
+		$builder3->where('DATE(pr.fecha) <=', $post['hasta']);
 
-		// Ejecutar
+		// === 🔴 VENTA ===
+		$builder4 = $db->table('venta_detalle vd');
+		$builder4->select([
+			'v.fecha',
+			'p.producto',
+			'"VENTA" AS etapa',
+			'vd.cantidad',
+			'NULL AS rendimiento',
+			'NULL AS cascara',
+			'NULL AS humedad',
+			'v.nro_comprobante AS comprobante',
+			'pr.nro_comprobante AS referencia'
+		]);
+		$builder4->join('venta v', 'v.id_venta = vd.id_venta', 'inner');
+		$builder4->join('producto p', 'p.id_producto = vd.id_producto', 'inner');
+		$builder4->join('proceso pr', 'pr.id_proceso = v.id_proceso', 'left');
+		if (!empty($post['id'])) {
+			$builder4->where('vd.id_producto', $post['id']);
+		}
+		$builder4->where('DATE(v.fecha) >=', $post['desde']);
+		$builder4->where('DATE(v.fecha) <=', $post['hasta']);
+
+		// === UNION DE TODAS LAS ETAPAS ===
+		$builder1->unionAll($builder2);
+		$builder1->unionAll($builder3);
+		$builder1->unionAll($builder4);
+
 		$query = $builder1->get();
 		return $query->getResultArray();
 	}

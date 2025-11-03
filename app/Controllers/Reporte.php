@@ -7,6 +7,7 @@ use App\Controllers\BaseController;
 use App\Models\AlmacenModel;
 use App\Models\CompraModel;
 use App\Models\SecadoModel;
+use App\Models\VentaModel;
 
 class Reporte extends BaseController
 {
@@ -65,4 +66,21 @@ class Reporte extends BaseController
         return view('Comprassecado', $vista);
     }
 
+    public function trazabilidad()
+    {
+        
+        $desde = !empty($_GET) ? $_GET["desde"] : "";
+        $hasta = !empty($_GET) ? $_GET["hasta"] : "";
+
+        $datos = array(
+            "desde" => $desde,
+            "hasta" => $hasta
+        );
+
+        $model = new VentaModel();
+        $vista["lista"] = $model->filtro_trazabilidad($datos);
+        $vista["filtro"] = $datos;
+
+        return view('Trazabilidad', $vista);
+    }
 }
