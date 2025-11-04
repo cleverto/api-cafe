@@ -469,38 +469,38 @@ class ProcesoModel extends Model
 		$id = $this->db->insertID();
 
 
-		$cantidadTotal = 0;
-		$totalGeneral = 0;
-		$detalleBatch = [];
-		foreach ($detalle as $dc) {
-			$detalleBatch[] = [
-				'id_proceso'   => $id,
-				'id_producto' => $dc['id_producto'],
-				'cantidad'    => $dc['cantidad'],
-				'precio'    => $dc['precio'],
-				'total'    => $dc['total'],
-				'rendimiento'    => $dc['rendimiento'],
-				'cascara'    => $dc['cascara'],
-				'humedad'    => $dc['humedad'],
-			];
-			$cantidadTotal += $dc['cantidad'];
-			$totalGeneral += $dc['total'];
-		}
+		// $cantidadTotal = 0;
+		// $totalGeneral = 0;
+		// $detalleBatch = [];
+		// foreach ($detalle as $dc) {
+		// 	$detalleBatch[] = [
+		// 		'id_proceso'   => $id,
+		// 		'id_producto' => $dc['id_producto'],
+		// 		'cantidad'    => $dc['cantidad'],
+		// 		'precio'    => $dc['precio'],
+		// 		'total'    => $dc['total'],
+		// 		'rendimiento'    => $dc['rendimiento'],
+		// 		'cascara'    => $dc['cascara'],
+		// 		'humedad'    => $dc['humedad'],
+		// 	];
+		// 	$cantidadTotal += $dc['cantidad'];
+		// 	$totalGeneral += $dc['total'];
+		// }
 
-		// Redondear a 2 decimales
-		$cantidadTotal = number_format($cantidadTotal, 2, '.', '');
-		$totalGeneral  = number_format($totalGeneral, 2, '.', '');
+		// // Redondear a 2 decimales
+		// $cantidadTotal = number_format($cantidadTotal, 2, '.', '');
+		// $totalGeneral  = number_format($totalGeneral, 2, '.', '');
 
 
 
-		if (!empty($detalleBatch)) {
-			$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
+		// if (!empty($detalleBatch)) {
+		// 	$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
 
-			$totales = array("cantidad" => $cantidadTotal, "total" => $totalGeneral);
-			$db = $this->db->table('proceso');
-			$db->where('id_proceso', $id);
-			$db->update($totales);
-		}
+		// 	$totales = array("cantidad" => $cantidadTotal, "total" => $totalGeneral);
+		// 	$db = $this->db->table('proceso');
+		// 	$db->where('id_proceso', $id);
+		// 	$db->update($totales);
+		// }
 
 		$db = $this->db->table('proceso');
 		$db->where('id_proceso',  $idModulo);

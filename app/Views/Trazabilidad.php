@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Reporte de Trazabilidad por Compra</title>
+  <title>Reporte de Trazabilidad por Producto</title>
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; color: #333; margin: 25px; }
-    h4 { text-align: center; color: #004085; border-bottom: 3px solid #004085; padding-bottom: 10px; margin-bottom: 20px; }
-    .grupo-compra { background: linear-gradient(90deg, #004085, #007bff); color: #fff; font-weight: bold; padding: 8px 12px; border-radius: 6px 6px 0 0; margin-top: 20px; }
-    .tabla-detalle { width: 100%; border-collapse: collapse; margin-bottom: 5px; background: #fff; border-radius: 0 0 6px 6px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .cont { font-family: 'Segoe UI', Arial, sans-serif;  color: #333; }
+    h4 { text-align: center; color: #004085; border-bottom: 3px solid #004085;  }
+    h5, h3 { color: #004085; margin-bottom: 10px; }
+    .tabla-detalle { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .tabla-detalle th, .tabla-detalle td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; }
     .tabla-detalle th { background: #e9ecef; text-align: center; color: #333; }
     .tabla-detalle tfoot td { font-weight: bold; background: #f1f1f1; text-align: right; }
@@ -24,46 +24,68 @@
 <body>
 
 <?php if (!empty($filtro["header"]) && $filtro["header"] == "1"): ?>
-  <div class="header"><h4>Reporte de Trazabilidad por Compra</h4></div>
+  <div class="header"><h4>Reporte de Trazabilidad por Producto</h4></div>
 <?php endif; ?>
 
 <?php
-// print_r($lista);
-// Función para mostrar un registro
-function mostrarFila($row, $etapaColor) {
+// Combinar todas las operaciones en un solo array
+$all = [];
+foreach($lista['compra'] ?? [] as $c) { $c['etapa_color'] = 'etapa-compra'; $all[] = $c; }
+foreach($lista['secado'] ?? [] as $s) { $s['etapa_color'] = 'etapa-secado'; $all[] = $s; }
+foreach($lista['proceso'] ?? [] as $p) { $p['etapa_color'] = 'etapa-proceso'; $all[] = $p; }
+foreach($lista['venta'] ?? [] as $v) { $v['etapa_color'] = 'etapa-venta'; $all[] = $v; }
+
+// Agrupar por producto
+$productos = [];
+foreach($all as $row) {
+    $prod = $row['producto'] ?? 'Sin producto';
+    $productos[$prod][] = $row;
+}
+
+// Función para mostrar una fila
+function mostrarFila($row) {
     $cantidad = $row['cantidad'] ?? 0;
     $total = $row['total'] ?? 0;
     $precio = $row['precio'] ?? 0;
-    $esSalida = (strpos(strtolower($row['etapa'] ?? ''), 'salida') !== false || strtolower($row['etapa'] ?? '') === 'venta');
+    $esSalida = (strpos(strtolower($row['etapa'] ?? ''),'salida') !== false || strtolower($row['etapa'] ?? '') === 'venta');
     if ($esSalida) { $cantidad = -abs($cantidad); $total = -abs($total); }
 
     echo "<tr>
-        <td class='etapa $etapaColor'>".esc($row['etapa'] ?? '-')."</td>
-        <td>".esc($row['comprobante'] ?? '-')."</td>
-        <td>".esc($row['referencia'] ?? '-')."</td>
-        <td class='text-end'>".esc($row['rendimiento'] ?? '-')."</td>
-        <td class='text-end'>".esc($row['humedad'] ?? '-')."</td>
-        <td class='text-end'>".esc($row['cascara'] ?? '-')."</td>
+        <td class='etapa {$row['etapa_color']}'>".htmlspecialchars($row['etapa'] ?? '-')."</td>
+        <td>".htmlspecialchars($row['comprobante'] ?? '-')."</td>
+        <td>".htmlspecialchars($row['referencia'] ?? '-')."</td>
+        <td class='text-end'>".htmlspecialchars($row['rendimiento'] ?? '-')."</td>
+        <td class='text-end'>".htmlspecialchars($row['humedad'] ?? '-')."</td>
+        <td class='text-end'>".htmlspecialchars($row['cascara'] ?? '-')."</td>
         <td class='text-end ".($cantidad<0?'salida':'ingreso')."'>".number_format($cantidad,2)."</td>
         <td class='text-end'>".number_format($precio,2)."</td>
         <td class='text-end'>".number_format($total,2)."</td>
     </tr>";
+
     return [$cantidad, $total];
 }
 
-// Recorremos cada compra
-foreach($lista['compra'] ?? [] as $compra):
+// Recorrer cada producto y mostrar su tabla
+foreach($productos as $prodNombre => $datosProducto):
 
-    $compraActual = $compra['nro_comprobante_compra'];
-    $productoActual = $compra['producto'];
+    // Ordenar por módulo y fecha
+    $moduloPeso = [
+        'etapa-compra' => 1,
+        'etapa-secado' => 2,
+        'etapa-proceso'=> 3,
+        'etapa-venta'  => 4
+    ];
+    usort($datosProducto, function($a, $b) use ($moduloPeso){
+        $modA = $moduloPeso[$a['etapa_color']] ?? 99;
+        $modB = $moduloPeso[$b['etapa_color']] ?? 99;
 
-    $totalCantidad = 0;
-    $totalValor = 0;
+        if ($modA === $modB) {
+            return strcmp($a['fecha'] ?? '1900-01-01', $b['fecha'] ?? '1900-01-01');
+        }
+        return $modA - $modB;
+    });
 
-    // Encabezado del grupo
-    echo "<div class='grupo-compra'>
-        🧾 Compra: ".esc($compraActual)." &nbsp;|&nbsp; 📅 Fecha: ".esc($compra['fecha'] ?? '-')." &nbsp;|&nbsp; 🏷️ Producto: <strong>".esc($productoActual)."</strong>
-    </div>";
+    echo "<h5>Producto: <strong>".htmlspecialchars($prodNombre)."</strong></h5>";
 
     echo "<table class='tabla-detalle'>
         <thead>
@@ -75,50 +97,25 @@ foreach($lista['compra'] ?? [] as $compra):
         </thead>
         <tbody>";
 
-    // 1️⃣ Mostramos la compra
-    list($cant, $tot) = mostrarFila($compra, 'etapa-compra');
-    $totalCantidad += $cant;
-    $totalValor += $tot;
+    $totalCantidad = 0;
+    $totalValor = 0;
 
-    // 2️⃣ Buscamos secado correspondiente
-    foreach($lista['secado'] ?? [] as $secado):
-        if($secado['nro_comprobante_compra']==$compraActual && $secado['producto']==$productoActual):
-            list($cant, $tot) = mostrarFila($secado, 'etapa-secado');
-            $totalCantidad += $cant;
-            $totalValor += $tot;
-        endif;
-    endforeach;
+    foreach($datosProducto as $row) {
+        list($cant,$tot) = mostrarFila($row);
+        $totalCantidad += $cant;
+        $totalValor += $tot;
+    }
 
-    // 3️⃣ Buscamos proceso correspondiente
-    foreach($lista['proceso'] ?? [] as $proceso):
-        if($proceso['nro_comprobante_compra']==$compraActual && $proceso['producto']==$productoActual):
-            list($cant, $tot) = mostrarFila($proceso, 'etapa-proceso');
-            $totalCantidad += $cant;
-            $totalValor += $tot;
-        endif;
-    endforeach;
-
-    // 4️⃣ Buscamos venta correspondiente
-    foreach($lista['venta'] ?? [] as $venta):
-        if($venta['nro_comprobante_compra']==$compraActual && $venta['producto']==$productoActual):
-            list($cant, $tot) = mostrarFila($venta, 'etapa-venta');
-            $totalCantidad += $cant;
-            $totalValor += $tot;
-        endif;
-    endforeach;
-
-    // Total por grupo
     echo "</tbody>
         <tfoot>
         <tr>
-            <td colspan='6' style='text-align:right;'><strong>Total grupo:</strong></td>
+            <td colspan='6' style='text-align:right;'><strong>Total producto:</strong></td>
             <td class='".($totalCantidad<0?'salida':'ingreso')."'>".number_format($totalCantidad,2)."</td>
-            <td class='text-end'>".number_format($totalCantidad !=0 ? $totalValor/abs($totalCantidad) : 0,2)."</td>
+            <td class='text-end'>".number_format($totalCantidad!=0?$totalValor/abs($totalCantidad):0,2)."</td>
             <td class='text-end'>".number_format($totalValor,2)."</td>
         </tr>
         </tfoot>
     </table>";
-
 endforeach;
 ?>
 </body>

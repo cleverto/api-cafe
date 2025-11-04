@@ -241,27 +241,25 @@ class VentaModel extends Model
 		$query = $builder->get();
 		return $query->getResultArray();
 	}
-
 	public function filtro_trazabilidad($post)
 	{
-		$producto = $post['producto'] ?? 'todos';
+		$producto = $post['producto'] ?? 'TODOS';
 		$desde = $post['desde'] ?? '1900-01-01';
 		$hasta = $post['hasta'] ?? date('Y-m-d');
+		$producto = $post['producto'] ?? 'TODOS';
+		$filtroCompra  = ($producto !== 'TODOS') ? "AND cd.id_producto = '{$producto}'" : '';
+		$filtroSecado  = ($producto !== 'TODOS') ? "AND sd.id_producto = '{$producto}'" : '';
+		$filtroProceso = ($producto !== 'TODOS') ? "AND pd.id_producto = '{$producto}'" : '';
+		$filtroVenta   = ($producto !== 'TODOS') ? "AND vd.id_producto = '{$producto}'" : '';
 
-		// Si producto ≠ 'todos', agregamos filtro
-		$filtroCompra   = ($producto !== 'todos') ? "AND cd.id_producto = {$producto}" : '';
-		$filtroSecado   = ($producto !== 'todos') ? "AND sd.id_producto = {$producto}" : '';
-		$filtroProceso  = ($producto !== 'todos') ? "AND pd.id_producto = {$producto}" : '';
-		$filtroVenta    = ($producto !== 'todos') ? "AND vd.id_producto = {$producto}" : '';
 
-		// 🟢 COMPRA
+		// 🟢 Compras
 		$sqlCompra = "
         SELECT 
             c.id_tipo_comprobante,
-            c.nro_comprobante AS nro_comprobante_compra,
+            c.nro_comprobante AS comprobante,
             c.fecha,
             'Compra' AS etapa,
-            c.nro_comprobante AS comprobante,
             NULL AS referencia,
             p.producto,
             cd.cantidad,
@@ -275,21 +273,25 @@ class VentaModel extends Model
         INNER JOIN producto p ON p.id_producto = cd.id_producto
         WHERE DATE(c.fecha) BETWEEN '{$desde}' AND '{$hasta}'
         {$filtroCompra}
-        ORDER BY c.id_tipo_comprobante, c.fecha
+        ORDER BY c.id_tipo_comprobante, c.fecha, c.nro_comprobante
     ";
-		$compra = $this->db->query($sqlCompra)->getResultArray();
+		$compras = $this->db->query($sqlCompra)->getResultArray();
 
-		// 🟡 SECADO
+		// 🟡 Secados
 		$sqlSecado = "
-  SELECT DISTINCT
+SELECT
     s.id_tipo_comprobante,
-    c.nro_comprobante AS nro_comprobante_compra,
-    s.fecha,
-    CASE WHEN s.operacion = 'S' THEN 'Secado salida' ELSE 'Secado ingreso' END AS etapa,
     s.nro_comprobante AS comprobante,
-    c.nro_comprobante AS referencia,
+    -- Todos los nro_comprobante de compra asociados en un solo campo
+    (SELECT GROUP_CONCAT(c.nro_comprobante SEPARATOR ', ')
+     FROM secado_compra sc
+     INNER JOIN compra c ON c.id_compra = sc.id_compra
+     WHERE sc.id_secado = s.id_secado
+    ) AS referencia,
+    s.fecha,
+    CASE WHEN s.operacion='S' THEN 'Secado salida' ELSE 'Secado ingreso' END AS etapa,
     p.producto,
-    CASE WHEN s.operacion = 'S' THEN -sd.cantidad ELSE sd.cantidad END AS cantidad,
+    CASE WHEN s.operacion='S' THEN -sd.cantidad ELSE sd.cantidad END AS cantidad,
     sd.precio,
     sd.total,
     sd.rendimiento,
@@ -297,28 +299,45 @@ class VentaModel extends Model
     sd.humedad
 FROM secado_detalle sd
 INNER JOIN secado s ON s.id_secado = sd.id_secado
-INNER JOIN secado_compra sc ON sc.id_secado = s.id_secado
-INNER JOIN compra c ON c.id_compra = sc.id_compra
 INNER JOIN producto p ON p.id_producto = sd.id_producto
 WHERE DATE(s.fecha) BETWEEN '{$desde}' AND '{$hasta}'
 {$filtroSecado}
-
-ORDER BY s.id_tipo_comprobante, s.fecha
+GROUP BY s.id_secado, sd.id_producto
+ORDER BY s.id_tipo_comprobante, s.fecha, s.nro_comprobante;
 
     ";
-		$secado = $this->db->query($sqlSecado)->getResultArray();
+		$secados = $this->db->query($sqlSecado)->getResultArray();
 
-		// 🔵 PROCESO
+		// 🔵 Procesos
 		$sqlProceso = "
 SELECT 
     pr.id_tipo_comprobante,
-    c.nro_comprobante AS nro_comprobante_compra,
-    pr.fecha,
-    CASE WHEN pr.operacion = 'S' THEN 'Proceso salida' ELSE 'Proceso ingreso' END AS etapa,
     pr.nro_comprobante AS comprobante,
-    COALESCE(s.nro_comprobante, c.nro_comprobante) AS referencia,
+    -- Traemos todas las referencias de secado o compra relacionadas al proceso, evitando duplicados
+    (
+        SELECT GROUP_CONCAT(DISTINCT
+            CASE 
+                WHEN s.nro_comprobante IS NOT NULL THEN s.nro_comprobante
+                WHEN c.nro_comprobante IS NOT NULL THEN c.nro_comprobante
+            END
+            ORDER BY
+                CASE 
+                    WHEN s.nro_comprobante IS NOT NULL THEN s.nro_comprobante
+                    WHEN c.nro_comprobante IS NOT NULL THEN c.nro_comprobante
+                END
+            SEPARATOR ', '
+        )
+        FROM proceso_detalle pd2
+        LEFT JOIN secado_detalle sd2 ON sd2.id_producto = pd2.id_producto
+        LEFT JOIN secado s ON s.id_secado = sd2.id_secado
+        LEFT JOIN compra_detalle cd2 ON cd2.id_producto = pd2.id_producto
+        LEFT JOIN compra c ON c.id_compra = cd2.id_compra
+        WHERE pd2.id_proceso = pr.id_proceso
+    ) AS referencia,
+    pr.fecha,
+    CASE WHEN pr.operacion='S' THEN 'Proceso salida' ELSE 'Proceso ingreso' END AS etapa,
     p.producto,
-    SUM(CASE WHEN pr.operacion = 'S' THEN -pd.cantidad ELSE pd.cantidad END) AS cantidad,
+    SUM(CASE WHEN pr.operacion='S' THEN -pd.cantidad ELSE pd.cantidad END) AS cantidad,
     pd.precio,
     pd.total,
     pd.rendimiento,
@@ -326,55 +345,88 @@ SELECT
     pd.humedad
 FROM proceso_detalle pd
 INNER JOIN proceso pr ON pr.id_proceso = pd.id_proceso
-INNER JOIN proceso_modulo pm ON pm.id_proceso = pr.id_proceso
-LEFT JOIN secado s ON s.id_secado = pm.id_modulo AND pm.modulo = 'Secado'
-LEFT JOIN compra c ON c.id_compra = pm.id_modulo AND pm.modulo = 'Compra'
 INNER JOIN producto p ON p.id_producto = pd.id_producto
 WHERE DATE(pr.fecha) BETWEEN '{$desde}' AND '{$hasta}'
 {$filtroProceso}
-GROUP BY pd.id_detalle
-ORDER BY pr.fecha, pr.id_tipo_comprobante
+GROUP BY pr.id_proceso, pd.id_producto
+ORDER BY pr.id_tipo_comprobante, pr.fecha, pr.nro_comprobante;
+
 
     ";
-		$proceso = $this->db->query($sqlProceso)->getResultArray();
+		$procesos = $this->db->query($sqlProceso)->getResultArray();
 
-		// 🔴 VENTA
+		// 🔴 Ventas
 		$sqlVenta = "
-        SELECT 
-            v.id_tipo_comprobante,
-            c.nro_comprobante AS nro_comprobante_compra,
-            v.fecha,
-            'Venta' AS etapa,
-            v.nro_comprobante AS comprobante,
-            COALESCE(pr.nro_comprobante, s.nro_comprobante, c.nro_comprobante) AS referencia,
-            p.producto,
-            -vd.cantidad AS cantidad,
-            vd.precio,
-            vd.total,
-            NULL AS rendimiento,
-            NULL AS cascara,
-            NULL AS humedad
-        FROM venta_detalle vd
-        INNER JOIN venta v ON v.id_venta = vd.id_venta
-        INNER JOIN venta_modulo vm ON vm.id_venta = v.id_venta
-        LEFT JOIN compra c ON c.id_compra = vm.id_modulo AND vm.modulo = 'Compra'
-        LEFT JOIN secado s ON s.id_secado = vm.id_modulo AND vm.modulo = 'Secado'
-        LEFT JOIN proceso pr ON pr.id_proceso = vm.id_modulo AND vm.modulo = 'Proceso'
-        INNER JOIN producto p ON p.id_producto = vd.id_producto
-        WHERE DATE(v.fecha) BETWEEN '{$desde}' AND '{$hasta}'
-        {$filtroVenta}
-        ORDER BY v.id_tipo_comprobante, v.fecha
+SELECT 
+    v.id_tipo_comprobante,
+    v.nro_comprobante AS comprobante,
+    -- Todas las referencias relacionadas a la venta (compra, secado, proceso) concatenadas
+    (
+        SELECT GROUP_CONCAT(
+            CASE 
+                WHEN vm2.modulo = 'Compra' THEN c2.nro_comprobante
+                WHEN vm2.modulo = 'Secado' THEN s2.nro_comprobante
+                WHEN vm2.modulo = 'Proceso' THEN pr2.nro_comprobante
+            END SEPARATOR ', '
+        )
+        FROM venta_modulo vm2
+        LEFT JOIN compra c2 ON c2.id_compra = vm2.id_modulo AND vm2.modulo='Compra'
+        LEFT JOIN secado s2 ON s2.id_secado = vm2.id_modulo AND vm2.modulo='Secado'
+        LEFT JOIN proceso pr2 ON pr2.id_proceso = vm2.id_modulo AND vm2.modulo='Proceso'
+        WHERE vm2.id_venta = v.id_venta
+    ) AS referencia,
+    v.fecha,
+    'Venta' AS etapa,
+    p.producto,
+    -vd.cantidad AS cantidad,
+    vd.precio,
+    vd.total,
+    NULL AS rendimiento,
+    NULL AS cascara,
+    NULL AS humedad
+FROM venta_detalle vd
+INNER JOIN venta v ON v.id_venta = vd.id_venta
+INNER JOIN venta_modulo vm ON vm.id_venta = v.id_venta
+INNER JOIN producto p ON p.id_producto = vd.id_producto
+WHERE DATE(v.fecha) BETWEEN '{$desde}' AND '{$hasta}'
+{$filtroVenta}
+GROUP BY v.id_venta, vd.id_producto
+ORDER BY v.id_tipo_comprobante, v.fecha, v.nro_comprobante;
+
     ";
-		$venta = $this->db->query($sqlVenta)->getResultArray();
+		$ventas = $this->db->query($sqlVenta)->getResultArray();
 
 		return [
-			'compra'  => $compra,
-			'secado'  => $secado,
-			'proceso' => $proceso,
-			'venta'   => $venta
+			'compra'  => $compras,
+			'secado'  => $secados,
+			'proceso' => $procesos,
+			'venta'   => $ventas
 		];
 	}
 
+	public function venta_relacionados_salida($id, $id_kardex, $compras)
+	{
+
+		$batch = [];
+		$ids_modulo_agregados = [];
+		foreach ($compras as $row) {
+			// Evitar duplicado de id_modulo
+			if (!in_array($row['id_compra'], $ids_modulo_agregados)) {
+				$batch[] = [
+					'id_venta' => $id,
+					'id_modulo' => $row['id_compra'],
+					'id_kardex' => $id_kardex,
+					'modulo' => $row['modulo'],
+				];
+
+				// Marcar este id_compra como agregado
+				$ids_modulo_agregados[] = $row['id_compra'];
+			}
+		}
+
+		$builder = $this->db->table('venta_modulo');
+		$builder->insertBatch($batch);
+	}
 
 
 	public function proceso_compra_secado_ingreso($id, $id_kardex, $id_proceso_salida)
