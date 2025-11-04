@@ -244,145 +244,139 @@ class VentaModel extends Model
 
 	public function filtro_trazabilidad($post)
 	{
-		$db = $this->db;
+		$producto = $post['producto'] ?? 'todos';
+		$desde = $post['desde'] ?? '1900-01-01';
+		$hasta = $post['hasta'] ?? date('Y-m-d');
 
-		// === 🟢 COMPRA ===
-		$builder1 = $db->table('compra_detalle cd');
-		$builder1->select([
-			'c.fecha',
-			'p.producto',
-			'"COMPRA" AS etapa',
-			'cd.cantidad',
-			'cd.rendimiento',
-			'cd.cascara',
-			'cd.humedad',
-			'c.nro_comprobante AS comprobante',
-			'prv.proveedor AS referencia'
-		]);
-		$builder1->join('compra c', 'c.id_compra = cd.id_compra', 'inner');
-		$builder1->join('proveedor prv', 'prv.id_proveedor = c.id_proveedor', 'left');
-		$builder1->join('producto p', 'p.id_producto = cd.id_producto', 'inner');
-		if (!empty($post['id'])) {
-			$builder1->where('cd.id_producto', $post['id']);
-		}
-		$builder1->where('DATE(c.fecha) >=', $post['desde']);
-		$builder1->where('DATE(c.fecha) <=', $post['hasta']);
+		// Si producto ≠ 'todos', agregamos filtro
+		$filtroCompra   = ($producto !== 'todos') ? "AND cd.id_producto = {$producto}" : '';
+		$filtroSecado   = ($producto !== 'todos') ? "AND sd.id_producto = {$producto}" : '';
+		$filtroProceso  = ($producto !== 'todos') ? "AND pd.id_producto = {$producto}" : '';
+		$filtroVenta    = ($producto !== 'todos') ? "AND vd.id_producto = {$producto}" : '';
 
-		// === 🟡 SECADO ===
-		$builder2 = $db->table('secado_detalle sd');
-		$builder2->select([
-			's.fecha',
-			'p.producto',
-			'"SECADO" AS etapa',
-			'sd.cantidad',
-			'sd.rendimiento',
-			'sd.cascara',
-			'sd.humedad',
-			's.nro_comprobante AS comprobante',
-			'c.nro_comprobante AS referencia'
-		]);
-		$builder2->join('secado s', 's.id_secado = sd.id_secado', 'inner');
-		$builder2->join('producto p', 'p.id_producto = sd.id_producto', 'inner');
-		$builder2->join('secado_compra sc', 'sc.id_secado = s.id_secado', 'left');
-		$builder2->join('compra c', 'c.id_compra = sc.id_compra', 'left');
-		if (!empty($post['id'])) {
-			$builder2->where('sd.id_producto', $post['id']);
-		}
-		$builder2->where('DATE(s.fecha) >=', $post['desde']);
-		$builder2->where('DATE(s.fecha) <=', $post['hasta']);
+		// 🟢 COMPRA
+		$sqlCompra = "
+        SELECT 
+            c.id_tipo_comprobante,
+            c.nro_comprobante AS nro_comprobante_compra,
+            c.fecha,
+            'Compra' AS etapa,
+            c.nro_comprobante AS comprobante,
+            NULL AS referencia,
+            p.producto,
+            cd.cantidad,
+            cd.precio,
+            cd.total,
+            cd.rendimiento,
+            cd.cascara,
+            cd.humedad
+        FROM compra_detalle cd
+        INNER JOIN compra c ON c.id_compra = cd.id_compra
+        INNER JOIN producto p ON p.id_producto = cd.id_producto
+        WHERE DATE(c.fecha) BETWEEN '{$desde}' AND '{$hasta}'
+        {$filtroCompra}
+        ORDER BY c.id_tipo_comprobante, c.fecha
+    ";
+		$compra = $this->db->query($sqlCompra)->getResultArray();
 
-		// === 🔵 PROCESO ===
-		$builder3 = $db->table('proceso_detalle pd');
-		$builder3->select([
-			'pr.fecha',
-			'p.producto',
-			'"PROCESO" AS etapa',
-			'pd.cantidad',
-			'pd.rendimiento',
-			'pd.cascara',
-			'pd.humedad',
-			'pr.nro_comprobante AS comprobante',
-			's.nro_comprobante AS referencia'
-		]);
-		$builder3->join('proceso pr', 'pr.id_proceso = pd.id_proceso', 'inner');
-		$builder3->join('producto p', 'p.id_producto = pd.id_producto', 'inner');
-		$builder3->join('secado s', 's.id_secado = pr.id_secado', 'left'); // si el proceso proviene de un secado
-		if (!empty($post['id'])) {
-			$builder3->where('pd.id_producto', $post['id']);
-		}
-		$builder3->where('DATE(pr.fecha) >=', $post['desde']);
-		$builder3->where('DATE(pr.fecha) <=', $post['hasta']);
+		// 🟡 SECADO
+		$sqlSecado = "
+  SELECT DISTINCT
+    s.id_tipo_comprobante,
+    c.nro_comprobante AS nro_comprobante_compra,
+    s.fecha,
+    CASE WHEN s.operacion = 'S' THEN 'Secado salida' ELSE 'Secado ingreso' END AS etapa,
+    s.nro_comprobante AS comprobante,
+    c.nro_comprobante AS referencia,
+    p.producto,
+    CASE WHEN s.operacion = 'S' THEN -sd.cantidad ELSE sd.cantidad END AS cantidad,
+    sd.precio,
+    sd.total,
+    sd.rendimiento,
+    sd.cascara,
+    sd.humedad
+FROM secado_detalle sd
+INNER JOIN secado s ON s.id_secado = sd.id_secado
+INNER JOIN secado_compra sc ON sc.id_secado = s.id_secado
+INNER JOIN compra c ON c.id_compra = sc.id_compra
+INNER JOIN producto p ON p.id_producto = sd.id_producto
+WHERE DATE(s.fecha) BETWEEN '{$desde}' AND '{$hasta}'
+{$filtroSecado}
 
-		// === 🔴 VENTA ===
-		$builder4 = $db->table('venta_detalle vd');
-		$builder4->select([
-			'v.fecha',
-			'p.producto',
-			'"VENTA" AS etapa',
-			'vd.cantidad',
-			'NULL AS rendimiento',
-			'NULL AS cascara',
-			'NULL AS humedad',
-			'v.nro_comprobante AS comprobante',
-			'pr.nro_comprobante AS referencia'
-		]);
-		$builder4->join('venta v', 'v.id_venta = vd.id_venta', 'inner');
-		$builder4->join('producto p', 'p.id_producto = vd.id_producto', 'inner');
-		$builder4->join('proceso pr', 'pr.id_proceso = v.id_proceso', 'left');
-		if (!empty($post['id'])) {
-			$builder4->where('vd.id_producto', $post['id']);
-		}
-		$builder4->where('DATE(v.fecha) >=', $post['desde']);
-		$builder4->where('DATE(v.fecha) <=', $post['hasta']);
+ORDER BY s.id_tipo_comprobante, s.fecha
 
-		// === UNION DE TODAS LAS ETAPAS ===
-		$builder1->unionAll($builder2);
-		$builder1->unionAll($builder3);
-		$builder1->unionAll($builder4);
+    ";
+		$secado = $this->db->query($sqlSecado)->getResultArray();
 
-		$query = $builder1->get();
-		return $query->getResultArray();
+		// 🔵 PROCESO
+		$sqlProceso = "
+SELECT 
+    pr.id_tipo_comprobante,
+    c.nro_comprobante AS nro_comprobante_compra,
+    pr.fecha,
+    CASE WHEN pr.operacion = 'S' THEN 'Proceso salida' ELSE 'Proceso ingreso' END AS etapa,
+    pr.nro_comprobante AS comprobante,
+    COALESCE(s.nro_comprobante, c.nro_comprobante) AS referencia,
+    p.producto,
+    SUM(CASE WHEN pr.operacion = 'S' THEN -pd.cantidad ELSE pd.cantidad END) AS cantidad,
+    pd.precio,
+    pd.total,
+    pd.rendimiento,
+    pd.cascara,
+    pd.humedad
+FROM proceso_detalle pd
+INNER JOIN proceso pr ON pr.id_proceso = pd.id_proceso
+INNER JOIN proceso_modulo pm ON pm.id_proceso = pr.id_proceso
+LEFT JOIN secado s ON s.id_secado = pm.id_modulo AND pm.modulo = 'Secado'
+LEFT JOIN compra c ON c.id_compra = pm.id_modulo AND pm.modulo = 'Compra'
+INNER JOIN producto p ON p.id_producto = pd.id_producto
+WHERE DATE(pr.fecha) BETWEEN '{$desde}' AND '{$hasta}'
+{$filtroProceso}
+GROUP BY pd.id_detalle
+ORDER BY pr.fecha, pr.id_tipo_comprobante
+
+    ";
+		$proceso = $this->db->query($sqlProceso)->getResultArray();
+
+		// 🔴 VENTA
+		$sqlVenta = "
+        SELECT 
+            v.id_tipo_comprobante,
+            c.nro_comprobante AS nro_comprobante_compra,
+            v.fecha,
+            'Venta' AS etapa,
+            v.nro_comprobante AS comprobante,
+            COALESCE(pr.nro_comprobante, s.nro_comprobante, c.nro_comprobante) AS referencia,
+            p.producto,
+            -vd.cantidad AS cantidad,
+            vd.precio,
+            vd.total,
+            NULL AS rendimiento,
+            NULL AS cascara,
+            NULL AS humedad
+        FROM venta_detalle vd
+        INNER JOIN venta v ON v.id_venta = vd.id_venta
+        INNER JOIN venta_modulo vm ON vm.id_venta = v.id_venta
+        LEFT JOIN compra c ON c.id_compra = vm.id_modulo AND vm.modulo = 'Compra'
+        LEFT JOIN secado s ON s.id_secado = vm.id_modulo AND vm.modulo = 'Secado'
+        LEFT JOIN proceso pr ON pr.id_proceso = vm.id_modulo AND vm.modulo = 'Proceso'
+        INNER JOIN producto p ON p.id_producto = vd.id_producto
+        WHERE DATE(v.fecha) BETWEEN '{$desde}' AND '{$hasta}'
+        {$filtroVenta}
+        ORDER BY v.id_tipo_comprobante, v.fecha
+    ";
+		$venta = $this->db->query($sqlVenta)->getResultArray();
+
+		return [
+			'compra'  => $compra,
+			'secado'  => $secado,
+			'proceso' => $proceso,
+			'venta'   => $venta
+		];
 	}
 
-	public function modulo($id)
-	{
-		$builder = $this->db->table('proceso a');
-		$builder->select('a.*');
-		$builder->select('b.proveedor, b.nro, c.simbolo');
-		$builder->select('d.id_credito');
 
-		$builder->join('proveedor b', 'b.id_proveedor = a.id_proveedor', 'inner');
-		$builder->join('moneda c', 'c.id_moneda = a.id_moneda', 'inner');
-		$builder->join('credito_compra d', 'd.id_compra = a.id_compra', 'inner');
-		//$builder->join('tipo_cambio d', 'd.id_moneda = a.id_moneda and d.fecha=a.fecha', 'left');
-		$builder->where('a.id_compra', $id);
 
-		$query = $builder->get();
-		return $query->getRowArray();
-	}
-	public function venta_relacionados_salida($id, $id_kardex, $compras)
-	{
-
-		$batch = [];
-		$ids_modulo_agregados = [];
-		foreach ($compras as $row) {
-			// Evitar duplicado de id_modulo
-			if (!in_array($row['id_compra'], $ids_modulo_agregados)) {
-				$batch[] = [
-					'id_venta' => $id,
-					'id_modulo' => $row['id_compra'],
-					'id_kardex' => $id_kardex,
-					'modulo' => $row['modulo'],
-				];
-
-				// Marcar este id_compra como agregado
-				$ids_modulo_agregados[] = $row['id_compra'];
-			}
-		}
-
-		$builder = $this->db->table('venta_modulo');
-		$builder->insertBatch($batch);
-	}
 	public function proceso_compra_secado_ingreso($id, $id_kardex, $id_proceso_salida)
 	{
 		$detalles = $this->db->table('proceso_modulo')

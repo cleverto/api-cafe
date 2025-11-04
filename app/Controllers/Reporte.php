@@ -71,10 +71,14 @@ class Reporte extends BaseController
         
         $desde = !empty($_GET) ? $_GET["desde"] : "";
         $hasta = !empty($_GET) ? $_GET["hasta"] : "";
+        $producto = !empty($_GET) ? $_GET["producto"] : "";
+        $h = $_GET["h"];
 
         $datos = array(
+            "producto" => $producto,
             "desde" => $desde,
-            "hasta" => $hasta
+            "hasta" => $hasta,
+            "header" => $h
         );
 
         $model = new VentaModel();
