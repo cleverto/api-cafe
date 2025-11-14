@@ -188,7 +188,7 @@ class VentaModel extends Model
 	public function buscar($post)
 	{
 		$builder = $this->db->table('venta a');
-		$builder->select('a.*');
+		$builder->select('a.*, cr.id_credito');
 
 		// nro_comprobante según el módulo (Compra, Secado, Proceso)
 		$builder->select("
@@ -231,6 +231,9 @@ class VentaModel extends Model
 		// Proceso (sin proveedor)
 		$builder->join('proceso pr', 'pr.id_proceso = d.id_modulo AND d.modulo="Proceso"', 'left');
 		$builder->join('proceso_detalle prd', 'prd.id_proceso = pr.id_proceso', 'left'); // opcional, si necesitas acceder a productos
+		//credito
+		$builder->join('credito_venta cr', 'cr.id_venta = a.id_venta', 'inner');
+
 
 		// Filtro de fechas
 		$builder->where("a.fecha BETWEEN '{$post['desde']}' AND '{$post['hasta']}'");
@@ -632,56 +635,70 @@ ORDER BY v.id_tipo_comprobante, v.fecha, v.nro_comprobante;
 
 		return $query;
 	}
+	public function guardar_credito_venta($id, $id_credito)
+	{
+		$data = array("id_venta" => $id, "id_credito" => $id_credito);
+
+		$builder = $this->db->table('credito_venta');
+		$builder->insert($data);
+		$id = $this->db->insertID();
+
+		return $id;
+	}
+
+
+
+
 	public function proceso_retorno($id, $id_proceso, $id_kardex)
 	{
-		$datos = ['id_retorno' => $id, 'id_proceso' => $id_proceso, 'id_kardex' => $id_kardex];
-		$builder = $this->db->table('proceso_retorno');
-		$builder->insert($datos);
-		$id = $this->db->insertID();
+		// $datos = ['id_retorno' => $id, 'id_proceso' => $id_proceso, 'id_kardex' => $id_kardex];
+		// $builder = $this->db->table('proceso_retorno');
+		// $builder->insert($datos);
+		// $id = $this->db->insertID();
 	}
 	public function guardar_retorno($idModulo, $datos, $detalle)
 	{
-		$builder = $this->db->table('proceso');
-		$builder->insert($datos);
-		$id = $this->db->insertID();
+		// $builder = $this->db->table('proceso');
+		// $builder->insert($datos);
+		// $id = $this->db->insertID();
 
 
-		$cantidadTotal = 0;
-		$totalGeneral = 0;
-		$detalleBatch = [];
-		foreach ($detalle as $dc) {
-			$detalleBatch[] = [
-				'id_proceso'   => $id,
-				'id_producto' => $dc['id_producto'],
-				'cantidad'    => $dc['cantidad'],
-				'precio'    => $dc['precio'],
-				'total'    => $dc['total'],
-				'rendimiento'    => $dc['rendimiento'],
-				'cascara'    => $dc['cascara'],
-				'humedad'    => $dc['humedad'],
-			];
-			$cantidadTotal += $dc['cantidad'];
-			$totalGeneral += $dc['total'];
-		}
+		// $cantidadTotal = 0;
+		// $totalGeneral = 0;
+		// $detalleBatch = [];
+		// foreach ($detalle as $dc) {
+		// 	$detalleBatch[] = [
+		// 		'id_proceso'   => $id,
+		// 		'id_producto' => $dc['id_producto'],
+		// 		'cantidad'    => $dc['cantidad'],
+		// 		'precio'    => $dc['precio'],
+		// 		'total'    => $dc['total'],
+		// 		'rendimiento'    => $dc['rendimiento'],
+		// 		'cascara'    => $dc['cascara'],
+		// 		'humedad'    => $dc['humedad'],
+		// 	];
+		// 	$cantidadTotal += $dc['cantidad'];
+		// 	$totalGeneral += $dc['total'];
+		// }
 
-		// Redondear a 2 decimales
-		$cantidadTotal = number_format($cantidadTotal, 2, '.', '');
-		$totalGeneral  = number_format($totalGeneral, 2, '.', '');
+		// // Redondear a 2 decimales
+		// $cantidadTotal = number_format($cantidadTotal, 2, '.', '');
+		// $totalGeneral  = number_format($totalGeneral, 2, '.', '');
 
 
 
-		if (!empty($detalleBatch)) {
-			$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
+		// if (!empty($detalleBatch)) {
+		// 	$this->db->table('proceso_detalle')->insertBatch($detalleBatch);
 
-			$totales = array("cantidad" => $cantidadTotal, "total" => $totalGeneral);
-			$db = $this->db->table('proceso');
-			$db->where('id_proceso', $id);
-			$db->update($totales);
-		}
+		// 	$totales = array("cantidad" => $cantidadTotal, "total" => $totalGeneral);
+		// 	$db = $this->db->table('proceso');
+		// 	$db->where('id_proceso', $id);
+		// 	$db->update($totales);
+		// }
 
-		$db = $this->db->table('proceso');
-		$db->where('id_proceso',  $idModulo);
-		$db->update(['estado' => '1']);
-		return $id;
+		// $db = $this->db->table('proceso');
+		// $db->where('id_proceso',  $idModulo);
+		// $db->update(['estado' => '1']);
+		// return $id;
 	}
 }

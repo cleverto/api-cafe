@@ -84,6 +84,27 @@ class CreditoModel extends Model
 			$query = $builder->get();
 			return $query->getRowArray();
 		}
+		if ($post["modulo"] == "venta") {
+			$builder = $this->db->table('venta a');
+			$builder->select('a.*');
+			$builder->select('b.proveedor, c.simbolo');
+			$builder->select('d.id_credito, e.saldo, a.id_moneda');
+			// 	$builder->select("CASE 
+			//     WHEN a.id_moneda = 'USD' THEN ROUND(a.total * d.tipo_cambio,2)
+			//     ELSE a.total
+			// END AS total_pen");
+			$builder->join('proveedor b', 'b.id_proveedor = a.id_proveedor', 'inner');
+			$builder->join('moneda c', 'c.id_moneda = a.id_moneda', 'inner');
+			$builder->join('credito_venta d', 'd.id_venta = a.id_venta', 'inner');
+			$builder->join('credito e', 'e.id_credito = d.id_credito', 'inner');
+			//$builder->join('tipo_cambio d', 'd.id_moneda = a.id_moneda and d.fecha=a.fecha', 'left');
+			$builder->where('d.id_credito', $post["id"]);
+
+			$query = $builder->get();
+			return $query->getRowArray();
+
+			
+		}
 	}
 	public function guardar($data)
 	{

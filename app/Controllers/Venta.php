@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\AlmacenModel;
+use App\Models\CreditoModel;
 use App\Models\VentaModel;
 use App\Models\FuncionesModel;
 
@@ -76,7 +77,8 @@ class Venta extends BaseController
             'id_usuario' => $id_usuario,
             // 'operacion' => $post["operacion"],
             'id_tipo_comprobante' => $id_tipo_comprobante,
-            'id_proveedor' => $id_tipo_comprobante,
+            'id_proveedor' => $post["id_proveedor"],
+            'id_moneda' => "PEN",
             'nro_comprobante' =>  $nro_comprobante,
             'referencia' =>  $post["referencia"],
             'fecha' => date('Y-m-d H:i:s'),
@@ -103,6 +105,24 @@ class Venta extends BaseController
         );
         return $data;
     }
+    private function valores_credito($data)
+    {
+        $datos = array(
+            'id_empresa' => "1",
+            'id_sucursal' => "1",
+            'id_proveedor' => $data["id_proveedor"],
+            'id_moneda' =>  "PEN",
+            'movimiento' => '1',
+            'referencia' => $data["nro_comprobante"],
+            'total' => $data["total"],
+            'saldo' => $data["total"],
+            'fecha' => date('Y-m-d'),
+            'observaciones' => "",
+            'estado' => "0",
+        );
+
+        return $datos;
+    }
 
     public function guardar()
     {
@@ -110,6 +130,7 @@ class Venta extends BaseController
 
         $datos = $this->valores($post["form"]);
         $datos = $datos[0];
+
         $compras = $post["compras"];
 
         $model = new VentaModel();
@@ -128,6 +149,15 @@ class Venta extends BaseController
         $model->guardar_detalle($id, $detalleCompra);
 
         $model->venta_relacionados_salida($id, $id_kardex, $compras);
+
+
+        // registra cuenta por cobrar
+        $model_credito = new CreditoModel();
+        $datos_credito = $this->valores_credito($datos);
+        $id_credito = $model_credito->guardar($datos_credito);
+
+        // registra relación de compra y credito
+        $model->guardar_credito_venta($id, $id_credito);
 
         //actualizar stock
         $model_almacen = new AlmacenModel();
@@ -152,5 +182,4 @@ class Venta extends BaseController
         }
         return $this->response->setJSON($rpta);
     }
-
 }
