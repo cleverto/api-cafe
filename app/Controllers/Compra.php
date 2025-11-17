@@ -354,7 +354,7 @@ class Compra extends BaseController
     }
     public function eliminar()
     {
-        $post = json_decode(file_get_contents('php://input'));
+        $post = json_decode(file_get_contents('php://input'), true);
         $model = new CompraModel();
         $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");

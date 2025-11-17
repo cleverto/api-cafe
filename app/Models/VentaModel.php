@@ -161,7 +161,15 @@ class VentaModel extends Model
 
 		return $resultados;
 	}
+	public function get_credito($post)
+	{
+			
+		$builder = $this->db->table('credito_venta a');
+		$builder->where('id_venta', $post["id"]);
 
+		$query = $builder->get()->getRow();
+		return $query;
+	}
 	public function lista_detalle($id)
 	{
 		$builder = $this->db->table('compra_detalle a');

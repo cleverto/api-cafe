@@ -60,7 +60,14 @@ class Venta extends BaseController
         $rpta = array('items' => $items);
         return $this->response->setJSON($rpta);
     }
-
+    public function get_credito()
+    {
+        $data = json_decode(file_get_contents('php://input'));
+        $model = new CreditoModel();
+        $items = $model->get_credito($data->id);
+        $rpta = array('rpta' => '1', 'items' => $items);
+        return $this->response->setJSON($rpta);
+    }
     private function valores($post)
     {
         $model = new FuncionesModel();
@@ -164,7 +171,8 @@ class Venta extends BaseController
         $model_almacen->actualizar_stock($id_kardex);
 
         // *********
-        $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id);
+           
+        $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'id_credito' => $id_credito);
 
 
         return $this->response->setJSON($rpta);

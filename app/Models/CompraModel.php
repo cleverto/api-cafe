@@ -262,8 +262,8 @@ class CompraModel extends Model
 		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
 		$query = $this->db->table('kardex')->delete($datos_kardex);
 
-
-		$datos = array('id_compra' => $data->id);
+		$datos = array('id_compra' => $data["id"]);
+		$query = $this->db->table('credito_compra')->delete($datos);
 		$query = $this->db->table('compra')->delete($datos);
 
 		return $query;

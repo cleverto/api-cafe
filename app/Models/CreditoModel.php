@@ -31,6 +31,20 @@ class CreditoModel extends Model
 			$res = $query->getResultArray();
 			return $res;
 		}
+		if ($data["modulo"] == "venta") {
+
+			$builder = $this->db->table('credito_detalle a');
+			$builder->select('a.*');
+			$builder->select('c.tipo_caja');
+			$builder->join('credito_venta b', 'b.id_credito=a.id_credito', 'inner');
+			$builder->join('tipo_caja c', 'c.id_tipo_caja=a.id_tipo_caja', 'inner');
+			$builder->where('b.id_credito', $data["id"]);
+			$builder->orderBy('a.fecha desc');
+			$query = $builder->get();
+
+			$res = $query->getResultArray();
+			return $res;
+		}
 	}
 	public function modulo($id)
 	{
@@ -102,8 +116,6 @@ class CreditoModel extends Model
 
 			$query = $builder->get();
 			return $query->getRowArray();
-
-			
 		}
 	}
 	public function guardar($data)

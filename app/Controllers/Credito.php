@@ -36,6 +36,7 @@ class Credito extends BaseController
         $rpta = array('rpta' => '1', 'items' => $items);
         return $this->response->setJSON($rpta);
     }
+
     public function modulo_origen()
     {
         $post = json_decode(file_get_contents('php://input'), true);
@@ -56,7 +57,7 @@ class Credito extends BaseController
     {
         $datos = array(
             'id_credito' => $data["idmodulo"],
-            'id_tipo_caja' => $data["id_tipo_caja"],            
+            'id_tipo_caja' => $data["id_tipo_caja"],
             'fecha' => $data["fecha"],
             'monto' => $data["monto"],
             'referencia' => $data["referencia"],
@@ -78,7 +79,7 @@ class Credito extends BaseController
             'registro' => date('Y-m-d H:i:s'),
             'movimiento' => "I",
             'monto' => $data["monto"],
-            
+
             'estado' => "0",
             'referencia' => "",
             'observaciones' => $data["referencia"],
@@ -133,7 +134,7 @@ class Credito extends BaseController
 
         // para caja
         $model_caja = new CajaModel();
-        $datos_caja = $this->valores_caja($post );
+        $datos_caja = $this->valores_caja($post);
         $id_caja = $model_caja->guardar($datos_caja);
 
         // para caja credito
