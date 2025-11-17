@@ -15,11 +15,12 @@ class Reporte extends BaseController
     {
         $desde = !empty($_GET) ? $_GET["desde"] : "";
         $hasta = !empty($_GET) ? $_GET["hasta"] : "";
-
+        $h = $_GET["h"];
 
         $datos = array(
             "desde" => $desde,
-            "hasta" => $hasta
+            "hasta" => $hasta,
+            "header" => $h
         );
 
         $model = new CompraModel();
@@ -33,12 +34,13 @@ class Reporte extends BaseController
         $id = !empty($_GET) ? $_GET["id"] : "";
         $desde = !empty($_GET) ? $_GET["desde"] : "";
         $hasta = !empty($_GET) ? $_GET["hasta"] : "";
-
+        $h = $_GET["h"];
 
         $datos = array(
             "id" => $id,
             "desde" => $desde,
-            "hasta" => $hasta
+            "hasta" => $hasta,
+            "header" => $h
         );
 
         $model = new AlmacenModel();
@@ -50,7 +52,7 @@ class Reporte extends BaseController
 
     public function compras_secado()
     {
-        
+
         $desde = !empty($_GET) ? $_GET["desde"] : "";
         $hasta = !empty($_GET) ? $_GET["hasta"] : "";
 
@@ -68,7 +70,7 @@ class Reporte extends BaseController
 
     public function trazabilidad()
     {
-        
+
         $desde = !empty($_GET) ? $_GET["desde"] : "";
         $hasta = !empty($_GET) ? $_GET["hasta"] : "";
         $producto = !empty($_GET) ? $_GET["producto"] : "";
@@ -86,5 +88,44 @@ class Reporte extends BaseController
         $vista["filtro"] = $datos;
 
         return view('Trazabilidad', $vista);
+    }
+    public function trazabilidad_consolidado()
+    {
+
+        $desde = !empty($_GET) ? $_GET["desde"] : "";
+        $hasta = !empty($_GET) ? $_GET["hasta"] : "";
+        $producto = !empty($_GET) ? $_GET["producto"] : "";
+        $h = $_GET["h"];
+
+        $datos = array(
+            "producto" => $producto,
+            "desde" => $desde,
+            "hasta" => $hasta,
+            "header" => $h
+        );
+
+        $model = new VentaModel();
+        $vista["lista"] = $model->filtro_trazabilidad_consolidado($datos);
+        $vista["filtro"] = $datos;
+
+        return view('Trazabilidad_consolidado', $vista);
+    }
+    public function ventas()
+    {
+        $desde = !empty($_GET) ? $_GET["desde"] : "";
+        $hasta = !empty($_GET) ? $_GET["hasta"] : "";
+        $h = $_GET["h"];
+
+        $datos = array(
+            "desde" => $desde,
+            "hasta" => $hasta,
+            "header" => $h
+        );
+
+        $model = new VentaModel();
+        $vista["lista"] = $model->filtro($datos);
+        $vista["filtro"] = $datos;
+
+        return view('Ventas', $vista);
     }
 }

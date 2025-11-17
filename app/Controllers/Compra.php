@@ -81,8 +81,9 @@ class Compra extends BaseController
 
     private function valores($post)
     {
+        $tipo_comprobante="04";
         $model = new FuncionesModel();
-        $nro_comprobante = $model->get_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+        $nro_comprobante = $model->get_correlativo("1", "1",  $tipo_comprobante);
 
         $id_usuario = session()->get("data")["id_usuario"];
 
@@ -94,7 +95,7 @@ class Compra extends BaseController
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
             'id_proveedor' => $post["id_proveedor"],
-            'id_tipo_comprobante' => $post["id_tipo_comprobante"],
+            'id_tipo_comprobante' => $tipo_comprobante,
             'id_moneda' => $post["id_moneda"],
             'referencia' => $post["referencia"],
             'total' => $post["total"],
@@ -130,7 +131,7 @@ class Compra extends BaseController
 
         $id_usuario = session()->get("data")["id_usuario"];
         $datos = array(
-            'id_modulo' => $data['idmodulo'],
+            'id_modulo' => $data['idmodulo'] ?? "",
             'id_empresa' => "1",
             'id_sucursal' => "1",
             'id_almacen' => "1",
@@ -150,7 +151,7 @@ class Compra extends BaseController
             'ripio'       => "0",
             'impureza'    => "0",
             'defectos'    => "0",
-            'taza'        => "0",
+            'tara'        => $data['tara'],
             'kg_bruto'    => $data['kg_bruto'],
             'kg_neto'    => $data['kg_neto'],
             'qq_bruto'    => $data['qq_bruto'],
@@ -177,7 +178,7 @@ class Compra extends BaseController
             $datos['ripio'] = $data["ripio"];
             $datos['impureza'] = $data["impureza"];
             $datos['defectos'] = $data["defectos"];
-            $datos['taza'] = $data["taza"];
+            
         }
 
         return $datos;
@@ -245,9 +246,9 @@ class Compra extends BaseController
             //Guardar en kardex
             $datos_kardex = $this->valores_kardex($datos);
 
-
             $model_almacen = new AlmacenModel();
             $id_kardex = $model_almacen->guardar_kardex("", $datos_kardex, "compra_temp");
+
 
             // registra relación de almacen con kardex
             $model->guardar_kardex_compra($id, $id_kardex);

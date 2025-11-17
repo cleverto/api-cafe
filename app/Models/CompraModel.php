@@ -176,11 +176,11 @@ class CompraModel extends Model
 		$this->db->query("
   INSERT INTO compra_detalle (
     id_compra, id_producto, muestra, sacos, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, kg_bruto, kg_neto, qq_bruto, cantidad, precio, total
+    descarte, pasilla, negro, ripio, impureza, defectos, tara, kg_bruto, kg_neto, qq_bruto, cantidad, precio, total
   )
   SELECT 
     ? AS id_compra, id_producto, muestra, sacos, rendimiento, segunda, bola, cascara, humedad,
-    descarte, pasilla, negro, ripio, impureza, defectos, taza, kg_bruto, kg_neto, qq_bruto, cantidad, precio, total
+    descarte, pasilla, negro, ripio, impureza, defectos, tara, kg_bruto, kg_neto, qq_bruto, cantidad, precio, total
   FROM compra_temp
   WHERE id_usuario = ?", [$id, $datos["id_usuario"]]);
 

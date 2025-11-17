@@ -82,6 +82,7 @@ class Venta extends BaseController
             'id_sucursal' => "1",
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
+             'id_usuario' => $id_usuario,
             // 'operacion' => $post["operacion"],
             'id_tipo_comprobante' => $id_tipo_comprobante,
             'id_proveedor' => $post["id_proveedor"],

@@ -65,8 +65,15 @@ class Credito extends BaseController
 
         return $datos;
     }
-    private function valores_caja($data)
+    private function valores_caja($id, $data)
     {
+        $model = new CreditoModel();
+        $referencia = $model->get_referencia($id);
+        // Obtener la referencia desde la tabla credito
+       
+        $movimiento = $data["modulo"] === "venta" ? "I" : "S";
+
+
         $datos = array(
             'id_empresa' => $data["id_empresa"],
             'id_sucursal' => $data["id_sucursal"],
@@ -77,11 +84,10 @@ class Credito extends BaseController
             'id_moneda' => $data["id_moneda"],
             'fecha' => date("Y-m-d H:i:s", strtotime($data["fecha"] . " " . date("H:i:s"))),
             'registro' => date('Y-m-d H:i:s'),
-            'movimiento' => "I",
+            'movimiento' =>  $movimiento,
             'monto' => $data["monto"],
-
             'estado' => "0",
-            'referencia' => "",
+            'referencia'     => $referencia,
             'observaciones' => $data["referencia"],
         );
 
@@ -134,7 +140,7 @@ class Credito extends BaseController
 
         // para caja
         $model_caja = new CajaModel();
-        $datos_caja = $this->valores_caja($post);
+        $datos_caja = $this->valores_caja($datos["id_credito"], $post);
         $id_caja = $model_caja->guardar($datos_caja);
 
         // para caja credito

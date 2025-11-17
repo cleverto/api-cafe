@@ -103,21 +103,8 @@
       <thead>
         <tr>
           <th>Fecha</th>
-          <th>Proveedor</th>
+          <th>Cliente</th>
           <th>Producto</th>
-          <th>MUE</th>
-          <th>RTO</th>
-          <th>SP</th>
-          <th>BOL</th>
-          <th>CAS</th>
-          <th>HUM</th>
-          <th>DST</th>
-          <th>PLL</th>
-          <th>N/M</th>
-          <th>BM</th>
-          <th>IMP</th>
-          <th>DEF</th>
-          <th>PT</th>
           <th>Cant.</th>
           <th>Prec.</th>
           <th>Total</th>
@@ -130,57 +117,23 @@
         $sumaPrecio = 0;
         $sumaTotal = 0;
         $contador = 0;
-
-        $sumas = [
-          "muestra" => 0,
-          "rendimiento" => 0,
-          "segunda" => 0,
-          "bola" => 0,
-          "cascara" => 0,
-          "humedad" => 0,
-          "descarte" => 0,
-          "pasilla" => 0,
-          "negro" => 0,
-          "ripio" => 0,
-          "impureza" => 0,
-          "defectos" => 0,
-          "taza" => 0
-        ];
         ?>
 
         <?php if (!empty($lista)): ?>
           <?php foreach ($lista as $row): ?>
             <?php
             $subtotal = $row['cantidad'] * $row['precio'];
-
             $sumaCantidad += $row['cantidad'];
             $sumaPrecio += $row['precio'];
             $sumaTotal += $subtotal;
             $contador++;
-
-            foreach ($sumas as $campo => $valor) {
-              $sumas[$campo] += $row[$campo] ?? 0;
-            }
             ?>
 
             <tr>
-              <td class="text-end"><?= date("Y-m-d", strtotime($row['fecha'])) ?></td>
+              <td class="" width="80px"><?= date("d-m-Y", strtotime($row['fecha'])) ?></td>
               <td><?= htmlspecialchars($row['proveedor']) ?></td>
               <td><?= htmlspecialchars($row['producto']) ?></td>
 
-              <td class="text-end"><?= number_format($row['muestra'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['rendimiento'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['segunda'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['bola'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['cascara'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['humedad'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['descarte'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['pasilla'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['negro'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['ripio'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['impureza'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['defectos'], 2) ?></td>
-              <td class="text-end"><?= number_format($row['taza'], 2) ?></td>
 
               <td class="text-end"><?= number_format($row['cantidad'], 2) ?></td>
               <td class="text-end"><?= number_format($row['precio'], 2) ?></td>
@@ -201,10 +154,6 @@
         <tfoot>
           <tr>
             <td colspan="3" style="text-align:center; font-weight:bold;">TOTAL</td>
-
-            <?php foreach ($sumas as $s): ?>
-              <td class="text-end" style="font-weight:bold;"><?= number_format($s, 2) ?></td>
-            <?php endforeach; ?>
 
             <td class="text-end" style="font-weight:bold;"><?= number_format($sumaCantidad, 2) ?></td>
             <td class="text-end" style="font-weight:bold;"><?= number_format($sumaPrecio / $contador, 2) ?></td>

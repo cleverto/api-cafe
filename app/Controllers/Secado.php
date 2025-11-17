@@ -48,8 +48,9 @@ class Secado extends BaseController
 
     private function valores($post)
     {
+        $tipo_comprobante = "92";
         $model = new FuncionesModel();
-        $nro_comprobante = $model->get_correlativo("1", "1",  $post["id_tipo_comprobante"]);
+        $nro_comprobante = $model->get_correlativo("1", "1",  $tipo_comprobante);
 
         $id_usuario = session()->get("data")["id_usuario"];
 
@@ -59,7 +60,7 @@ class Secado extends BaseController
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
             'operacion' => "S",
-            'id_tipo_comprobante' => $post["id_tipo_comprobante"],
+            'id_tipo_comprobante' => $tipo_comprobante,
             'nro_comprobante' =>  $nro_comprobante,
             'fecha' => date('Y-m-d H:i:s'),
             'cantidad' => $post["qq"],
@@ -172,8 +173,9 @@ class Secado extends BaseController
 
     private function valores_retorno($post)
     {
+        $tipo_comprobante = "93";
         $model = new FuncionesModel();
-        $nro_comprobante = $model->get_correlativo("1", "1", "93");
+        $nro_comprobante = $model->get_correlativo("1", "1", $tipo_comprobante);
         $id_usuario = session()->get("data")["id_usuario"];
 
         $datos = array(
@@ -182,7 +184,7 @@ class Secado extends BaseController
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
             'operacion' => "I",
-            'id_tipo_comprobante' => "93",
+            'id_tipo_comprobante' => $tipo_comprobante,
             'nro_comprobante' =>  $nro_comprobante,
             'fecha' =>  $post["fecha"],
             'cantidad' => "0",

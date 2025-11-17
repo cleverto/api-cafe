@@ -4,88 +4,120 @@
 <head>
   <meta charset="UTF-8">
   <title>Reporte de Almacén</title>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 11px;
-      background: #f9f9f9;
+    .cont {
+      font-family: 'Segoe UI', Arial, sans-serif;
       color: #333;
-      margin: 20px;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      border-bottom: 1px solid #1c55a1;
-      padding-bottom: 5px;
     }
 
-    .header img {
-      height: 60px;
-    }
-    .header-text h1 {
-      font-size: 16px;
-      margin: 0;
-      color: #1c55a1;
-    }
-
-    .header-text {
+    h4 {
       text-align: center;
-      flex-grow: 1;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
+      color: #004085;
+      border-bottom: 3px solid #004085;
     }
 
-    table {
+    h5,
+    h3 {
+      color: #004085;
+      margin-bottom: 10px;
+    }
+
+    .tabla-detalle {
       width: 100%;
       border-collapse: collapse;
+      margin-bottom: 20px;
       background: #fff;
+      border-radius: 6px;
+      overflow: hidden;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
-    th {
+    .tabla-detalle th,
+    .tabla-detalle td {
       border: 1px solid #ddd;
-      padding: 1px;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+
+    .tabla-detalle th {
+      background: #e9ecef;
       text-align: center;
+      color: #333;
     }
 
-    th {
-      background: #007bff;
-      color: #fff;
-    }
-
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-
-    .compra {}
-
-    .secado {
-      background: #fff3cd !important;
-      color: #856404;
+    .tabla-detalle tfoot td {
       font-weight: bold;
+      background: #f1f1f1;
+      text-align: right;
+    }
+
+    .salida {
+      color: #d63333;
+      font-weight: 600;
+    }
+
+    .ingreso {
+      color: #1c7430;
+      font-weight: 600;
+    }
+
+    .etapa {
+      font-weight: 600;
+    }
+
+    .etapa-compra {
+      color: #155724;
+    }
+
+    .etapa-secado {
+      color: #856404;
+    }
+
+    .etapa-proceso {
+      color: #004085;
+    }
+
+    .etapa-venta {
+      color: #721c24;
+    }
+
+    .text-end {
+      text-align: right;
+    }
+
+    /* Estilos adicionales mínimos para el header */
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .header img {
+      width: 80px;
+      margin-right: 15px;
+    }
+
+    .header-text h1 {
+      margin: 0;
+      color: #004085;
     }
   </style>
 </head>
 
-<body>
+<body class="cont">
+  <?php if (!empty($filtro["header"]) && $filtro["header"] == "1"): ?>
+    <div class="header">
 
-  <div class="header">
-    <img src="<?= base_url('public/logo-empresa.png'); ?>" alt="Logo">
-    <div class="header-text">
-
-      <h1>REPORTE DE ALMACEN</h1>
-      <h3 style="font-size:14px; text-align:center;">
-        Desde <?= date("d/m/Y", strtotime($filtro["desde"])) ?> hasta <?= date("d/m/Y", strtotime($filtro["desde"])) ?>
-      </h3>
+      <div class="header-text">
+        <h1>REPORTE DE ALMACÉN</h1>
+        <h3 style="font-size:14px; text-align:center;">
+          Desde <?= date("d/m/Y", strtotime($filtro["desde"])) ?> hasta <?= date("d/m/Y", strtotime($filtro["hasta"])) ?>
+        </h3>
+      </div>
     </div>
-  </div>
-
-
-  <table>
+  <?php endif; ?>
+  <table class="tabla-detalle">
     <thead>
       <tr>
         <th>Fecha</th>
@@ -94,30 +126,34 @@
         <th>Ingreso</th>
         <th>Salida</th>
         <th>Saldo</th>
-
       </tr>
     </thead>
+
     <tbody>
       <?php
       $saldo = 0;
+
       foreach ($lista as $row):
+
         $ingreso = $row["operacion"] === "I" ? $row["cantidad"] : 0;
         $salida  = $row["operacion"] === "S" ? $row["cantidad"] : 0;
-        $saldo   = $saldo + $ingreso - $salida;
 
-        // Clases CSS para resaltar Compra o Secado
-        $claseMotivo = strtolower($row["motivo"]) === "compra" ? "compra" : "secado";
+        $saldo = $saldo + $ingreso - $salida;
+
+        $esIngreso = $ingreso > 0 ? "ingreso" : "";
+        $esSalida = $salida > 0 ? "salida" : "";
       ?>
-        <tr class="<?= $claseMotivo ?>">
-          <td width="80px"><?= date("Y-m-d", strtotime($row["fecha"])) ?></td>
-          <td width="120px"><?= $row["producto"] ?></td>
+        <tr>
+          <td width="90px"><?= date("d-m-Y", strtotime($row["fecha"])) ?></td>
+          <td width="auto"><?= $row["producto"] ?></td>
           <td width="80px"><?= ucfirst($row["motivo"]) ?></td>
-          <td class="text-end"><?= $ingreso ?></td>
-          <td class="text-end"><?= $salida ?></td>
-          <td class="text-end"><?= $saldo ?></td>
 
+          <td class="text-end <?= $esIngreso ?>"><?= $ingreso ?></td>
+          <td class="text-end <?= $esSalida ?>"><?= $salida ?></td>
+         <td class="text-end"><?= number_format($saldo, 2) ?></td>
 
         </tr>
+
       <?php endforeach; ?>
     </tbody>
   </table>

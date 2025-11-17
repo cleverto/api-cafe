@@ -76,7 +76,16 @@ class CreditoModel extends Model
 
 		return $id;
 	}
+	public function get_referencia($id)
+	{
+        $credito = $this->db->table('credito')
+            ->select('referencia')
+            ->where('id_credito', $id)
+            ->get()
+            ->getRow();
 
+		return  $credito ? $credito->referencia : "";
+	}
 	public function modulo_origen($post)
 	{
 		if ($post["modulo"] == "compra") {
