@@ -296,7 +296,7 @@ class ProcesoModel extends Model
 					$db->where('id_compra',  $detalle['id_compra']);
 					$db->update(['estado' => '1']);
 				} else {
-					$db = $this->db->table('Secado');
+					$db = $this->db->table('secado');
 					$db->where('id_secado',  $detalle['id_compra']);
 					$db->update(['estado' => '1']);
 				}

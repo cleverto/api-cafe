@@ -13,6 +13,9 @@ class AdministracionModel extends Model
 		if ($data->modulo == "tipo_comprobante") {
 			$builder->where("modulo", $data->opcion);
 		}
+		if ($data->modulo == "producto") {
+			$builder->select("qq");
+		}
 		$builder->orderBy($data->modulo);
 		$query = $builder->get();
 

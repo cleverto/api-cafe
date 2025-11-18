@@ -163,12 +163,18 @@ class VentaModel extends Model
 	}
 	public function get_credito($post)
 	{
-
 		$builder = $this->db->table('credito_venta a');
 		$builder->where('id_venta', $post["id"]);
 
-		$query = $builder->get()->getRow();
-		return $query;
+		return $builder->get()->getRow();
+	}
+	public function get_credito_caja($post)
+	{
+		$builder = $this->db->table('credito_detalle a');
+		$builder->join('credito_venta b', 'b.id_credito = a.id_credito', 'inner');
+		$builder->where('b.id_venta', $post["id"]);
+
+		return $builder->get()->getRow();
 	}
 	public function lista_detalle($id)
 	{
@@ -685,6 +691,25 @@ ORDER BY v.id_tipo_comprobante, v.fecha, v.nro_comprobante;
 		$query = $this->db->table('kardex')->delete($datos_kardex);
 		$query = $this->db->table('venta_modulo')->delete($datos);
 		$query = $this->db->table('venta_detalle')->delete($datos);
+
+
+		//eliminar las relaciones de caja
+		// Obtener los id_detalle y id_caja asociados
+		// $creditoVenta = $this->db->table('credito_venta')
+		// 	->select('id_credito')
+		// 	->where('id_venta', $data["id"])
+		// 	->get()
+		// 	->getRow();
+
+		// if ($creditoVenta) {
+		// 	$id_credito = $creditoVenta->id_credito;
+		// 	$this->db->table('caja_credito')->where('id_credito', $id_credito)->delete();
+			
+		// }
+		$query = $this->db->table('credito_venta')->delete($datos);
+
+
+
 
 		$model_almacen = new AlmacenModel();
 		$model_almacen->restaurar_stock($id_kardex, $productos);

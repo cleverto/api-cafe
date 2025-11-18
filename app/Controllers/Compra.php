@@ -81,7 +81,7 @@ class Compra extends BaseController
 
     private function valores($post)
     {
-        $tipo_comprobante="04";
+        $tipo_comprobante = "04";
         $model = new FuncionesModel();
         $nro_comprobante = $model->get_correlativo("1", "1",  $tipo_comprobante);
 
@@ -178,7 +178,6 @@ class Compra extends BaseController
             $datos['ripio'] = $data["ripio"];
             $datos['impureza'] = $data["impureza"];
             $datos['defectos'] = $data["defectos"];
-            
         }
 
         return $datos;
@@ -295,7 +294,7 @@ class Compra extends BaseController
 
             //actualizar stock 
             $model_almacen = new AlmacenModel();
-            $model_almacen->restaurar_stock("",$lista_detalle);
+            $model_almacen->restaurar_stock("", $lista_detalle);
             $model_almacen->actualizar_stock($id_kardex);
 
             // recupera id del credito
@@ -353,18 +352,6 @@ class Compra extends BaseController
 
         return $this->response->setJSON($rpta);
     }
-    public function eliminar()
-    {
-        $post = json_decode(file_get_contents('php://input'), true);
-        $model = new CompraModel();
-        $t = $model->eliminar($post);
-        $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
-        if ($t <= 0) {
-
-            $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");
-        }
-        return $this->response->setJSON($rpta);
-    }
     public function eliminar_producto()
     {
         $post = json_decode(file_get_contents('php://input'), true);
@@ -377,6 +364,26 @@ class Compra extends BaseController
             $total = $model->get_suma_total($post["idmodulo"], $id_usuario);
 
             $rpta = array('rpta' => '1', 'msg' => "El registro ha sido eliminado", "total" => $total);
+        }
+        return $this->response->setJSON($rpta);
+    }
+    public function eliminar()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+        $model = new CompraModel();
+
+        $row = $model->get_credito_caja($post);
+        if ($row !== null) {
+            $rpta = array('rpta' => '0', 'msg' => "Para eliminar la compra, elimine primero los pagos");
+            return $this->response->setJSON($rpta);
+        }
+
+
+        $t = $model->eliminar($post);
+        $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
+        if ($t <= 0) {
+
+            $rpta = array('rpta' => '1', 'msg' => "El registro no se puede eliminar");
         }
         return $this->response->setJSON($rpta);
     }

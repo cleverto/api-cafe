@@ -261,7 +261,7 @@ class CompraModel extends Model
 		$query = $this->db->table('kardex_compra')->delete($datos_kardex);
 		$query = $this->db->table('kardex_detalle')->delete($datos_kardex);
 		$query = $this->db->table('kardex')->delete($datos_kardex);
-
+		
 		$datos = array('id_compra' => $data["id"]);
 		$query = $this->db->table('credito_compra')->delete($datos);
 		$query = $this->db->table('compra')->delete($datos);
@@ -306,5 +306,13 @@ class CompraModel extends Model
 		$query = $this->db->table('compra_temp')->delete($datos);
 
 		return $query;
+	}
+	public function get_credito_caja($post)
+	{
+		$builder = $this->db->table('credito_detalle a');
+		$builder->join('credito_compra b', 'b.id_credito = a.id_credito', 'inner');
+		$builder->where('b.id_compra', $post["id"]);
+
+		return $builder->get()->getRow();
 	}
 }

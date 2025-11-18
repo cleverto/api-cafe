@@ -63,7 +63,7 @@ class Venta extends BaseController
     public function get_credito()
     {
         $data = json_decode(file_get_contents('php://input'));
-        $model = new CreditoModel();
+        $model = new VentaModel();
         $items = $model->get_credito($data->id);
         $rpta = array('rpta' => '1', 'items' => $items);
         return $this->response->setJSON($rpta);
@@ -82,7 +82,7 @@ class Venta extends BaseController
             'id_sucursal' => "1",
             'id_almacen' => "1",
             'id_usuario' => $id_usuario,
-             'id_usuario' => $id_usuario,
+            'id_usuario' => $id_usuario,
             // 'operacion' => $post["operacion"],
             'id_tipo_comprobante' => $id_tipo_comprobante,
             'id_proveedor' => $post["id_proveedor"],
@@ -172,7 +172,7 @@ class Venta extends BaseController
         $model_almacen->actualizar_stock($id_kardex);
 
         // *********
-           
+
         $rpta = array('rpta' => '1', 'msg' => "Creado correctamente", 'id' => $id, 'id_credito' => $id_credito);
 
 
@@ -183,6 +183,15 @@ class Venta extends BaseController
     {
         $post = json_decode(file_get_contents('php://input'), true);
         $model = new VentaModel();
+
+
+        $row = $model->get_credito_caja($post);
+        if ($row !== null) {
+            $rpta = array('rpta' => '0', 'msg' => "Para eliminar la venta, elimine primero los pagos");
+            return $this->response->setJSON($rpta);
+        }
+
+
         $t = $model->eliminar($post);
         $rpta = array('rpta' => '1', 'msg' => "Registro eliminado correctamente");
         if ($t <= 0) {
