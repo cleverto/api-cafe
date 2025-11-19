@@ -17,30 +17,52 @@ class Caja extends BaseController
         $rpta = array('items' => $data);
         return $this->response->setJSON($rpta);
     }
-    public function resumen()
+    public function lista_usuarios()
     {
+
         $model = new CajaModel();
-        $apertura = $model->apertura("PEN");
-        $apertura_dolares = $model->apertura("USD");
-        $ingresos = $model->ingresos("PEN");
-        $ingresos_dolares = $model->ingresos("USD");
-        $egresos = $model->egresos("PEN");
-        $egresos_dolares = $model->egresos("USD");
         $saldo_usuarios = $model->saldo_usuarios();
 
         $rpta = array(
-            'apertura' => $apertura,
-            'apertura_dolares' => $apertura_dolares,
-            'ingresos' => $ingresos,
-            'ingresos_dolares' => $ingresos_dolares,
-            'egresos' => $egresos,
-            'egresos_dolares' => $egresos_dolares,
-            'saldo' => $ingresos - $egresos,
-            'saldo_dolares' => $ingresos_dolares - $egresos_dolares,
-            'saldo_usuarios' => $saldo_usuarios
+            'id_usuario' => session()->get("data")["id_usuario"],
+            'items' => $saldo_usuarios
         );
         return $this->response->setJSON($rpta);
     }
+    public function resumen()
+    {
+        $post = json_decode(file_get_contents('php://input'), true);
+
+        $model = new CajaModel();
+        $apertura = $model->apertura($post);
+        $ingresos = $model->ingresos($post);
+        $egresos = $model->egresos($post);
+
+        $rpta = array(
+            'apertura' => $apertura,
+            'ingresos' => $ingresos,
+            'egresos' => $egresos,
+            'saldo' => $apertura["saldo"] - $egresos["saldo"],
+        );
+        return $this->response->setJSON($rpta);
+    }
+    // public function resumen_dolares()
+    // {
+    //     $model = new CajaModel();
+    //     $apertura_dolares = $model->apertura("USD");
+    //     $ingresos_dolares = $model->ingresos("USD");
+    //     $egresos_dolares = $model->egresos("USD");
+    //     $saldo_usuarios = $model->saldo_usuarios("USD");
+
+    //     $rpta = array(
+    //         'apertura_dolares' => $apertura_dolares,
+    //         'ingresos_dolares' => $ingresos_dolares,
+    //         'egresos_dolares' => $egresos_dolares,
+    //         'saldo_dolares' => $ingresos_dolares - $egresos_dolares,
+    //         'saldo_usuarios' => $saldo_usuarios
+    //     );
+    //     return $this->response->setJSON($rpta);
+    // }
     public function lista_by_usuario()
     {
         $post = json_decode(file_get_contents('php://input'), true);

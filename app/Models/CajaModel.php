@@ -28,71 +28,87 @@ class CajaModel extends Model
 		$builder->join('caja_credito d', 'a.id_caja=d.id_caja', 'left');
 		$builder->join('concepto e', 'a.id_concepto=e.id_concepto', 'inner');
 		$builder->where('a.id_usuario', $post["id_usuario"]);
+		$builder->where('a.id_moneda', $post["id_moneda"]);
+		$builder->orderBy('a.fecha');
 		$query = $builder->get();
 		$res = $query->getResultArray();
 		return $res;
 	}
-	public function apertura($moneda)
+	public function apertura($post)
 	{
 		$builder =  $this->db->table('caja c');
 		$builder->select("
     SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
-    SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo
+    SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo, b.simbolo
 ", false);
+		$builder->join('moneda b', 'c.id_moneda=b.id_moneda');
 		$builder->where('c.id_concepto', '1');
-		$builder->where('c.id_moneda', $moneda);
+		$builder->where('c.id_moneda', $post["id_moneda"]);
+		$builder->where('c.id_usuario', $post["id_usuario"]);
 		$builder->where('c.estado', 0);
 
 		$query = $builder->get();
 		$result = $query->getRow();
 
-		return $result->saldo ?? 0;
+		return [
+			"saldo"   => $result->saldo ?? 0,
+			"simbolo" => $result->simbolo ?? ""
+		];
 	}
-	public function ingresos($moneda)
+	public function ingresos($post)
 	{
 		$builder =  $this->db->table('caja c');
-		$builder->select("SUM(c.monto)  AS saldo");
-		$builder->where('c.id_concepto !=', '1');
-		$builder->where('c.id_moneda', $moneda);
+		$builder->select("SUM(c.monto)  AS saldo, b.simbolo");
+		//$builder->where('c.id_concepto !=', '1');
+		$builder->join('moneda b', 'c.id_moneda=b.id_moneda');
+		$builder->where('c.id_moneda', $post["id_moneda"]);
+		$builder->where('c.id_usuario', $post["id_usuario"]);
 		$builder->where('c.movimiento', 'I');
 		$builder->where('c.estado', 0);
 
 		$query = $builder->get();
 		$result = $query->getRow();
 
-		return $result->saldo ?? 0;
+		return [
+			"saldo"   => $result->saldo ?? 0,
+			"simbolo" => $result->simbolo ?? ""
+		];
 	}
-	public function egresos($moneda)
+	public function egresos($post)
 	{
 		$builder =  $this->db->table('caja c');
-		$builder->select("SUM(c.monto)  AS saldo");
-		$builder->where('c.id_concepto !=', '1');
-		$builder->where('c.id_moneda', $moneda);
+		$builder->select("SUM(c.monto)  AS saldo, b.simbolo");
+		$builder->join('moneda b', 'c.id_moneda=b.id_moneda');
+		$builder->where('c.id_moneda', $post["id_moneda"]);
+		$builder->where('c.id_usuario', $post["id_usuario"]);
 		$builder->where('c.movimiento', 'S');
 		$builder->where('c.estado', 0);
 
 		$query = $builder->get();
 		$result = $query->getRow();
 
-		return $result->saldo ?? 0;
+		return [
+			"saldo"   => $result->saldo ?? 0,
+			"simbolo" => $result->simbolo ?? ""
+		];
 	}
 	public function saldo_usuarios()
 	{
 		$builder = $this->db->table('caja c');
 		$builder->select("
-    c.id_usuario, b.usuario, c.id_moneda, 
+    c.id_usuario, b.usuario, c.id_moneda, e.simbolo,
     SUM(CASE WHEN c.movimiento = 'I' THEN c.monto ELSE 0 END) -
     SUM(CASE WHEN c.movimiento = 'S' THEN c.monto ELSE 0 END) AS saldo_apertura
 ", false);
 		$builder->join('usuario b', 'c.id_usuario=b.id_usuario', 'inner');
 		$builder->join('moneda e', 'c.id_moneda=e.id_moneda', 'inner');
-		
 		$builder->where('c.estado', 0);
 		$builder->groupBy('c.id_usuario, c.id_moneda');
 
 		$query = $builder->get();
 		return $query->getResult();
 	}
+
 	public function lista_pago($id)
 	{
 		$builder = $this->db->table('caja_detalle a');
@@ -114,7 +130,6 @@ class CajaModel extends Model
 
 		$query = $builder->get();
 		return $query->getRowArray();
-
 	}
 	public function guardar($data)
 	{
@@ -137,6 +152,5 @@ class CajaModel extends Model
 	{
 		$datos = array('id_caja' => $data["id"]);
 		return $this->db->table('caja')->delete($datos);
-
 	}
 }
