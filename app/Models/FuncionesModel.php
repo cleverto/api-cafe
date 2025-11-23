@@ -167,7 +167,7 @@ class FuncionesModel extends Model
    {
       $builder = $this->db->table("tipo_cambio a");
       $builder->select('a.id_tipo_cambio');
-      $builder->where('a.fecha', $fecha);
+      $builder->where("DATE(a.fecha)", date('Y-m-d', strtotime($fecha)));
       $builder->where('a.id_moneda', $id_moneda);
       $query = $builder->get();
 
