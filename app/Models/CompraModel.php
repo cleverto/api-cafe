@@ -72,9 +72,10 @@ class CompraModel extends Model
 		$builder = $this->db->table('compra a');
 		$builder->select('a.*');
 		$builder->select('b.proveedor');
-		$builder->select('c.id_credito');
+		$builder->select('c.id_credito, m.simbolo');
 		$builder->join('proveedor b', 'a.id_proveedor = b.id_proveedor', 'inner');
 		$builder->join('credito_compra c', 'a.id_compra = c.id_compra', 'inner');
+		$builder->join('moneda m', 'm.id_moneda = a.id_moneda', 'inner');
 		$builder->where('a.fecha BETWEEN "' . $post['desde'] . '" AND "' . $post['hasta'] . '"');
 		$builder->orderBy('a.fecha');
 		$query = $builder->get();
