@@ -15,6 +15,7 @@ class Home extends BaseController
     {
         echo 'Look at this!';
     }
+
     function image($image = null)
     {
 
@@ -117,18 +118,18 @@ class Home extends BaseController
         $data = $model->lista_menu($do);
         $data_opcion = $model->lista_menu_opcion($do);
 
-        $data = array('items' => $data, 'items_opcion'=> $data_opcion);
+        $data = array('items' => $data, 'items_opcion' => $data_opcion);
         return $this->response->setJSON($data);
     }
     public function lista_menu_opcion_by_perfil()
     {
         $data = json_decode(file_get_contents('php://input'));
-       
+
         if (isset($data->perfil)) {
-            $perfil = $data->perfil; 
-           
+            $perfil = $data->perfil;
+
             $model = new HomeModel();
-            $permissions = $model->lista_menu_opcion_by_perfil($perfil); 
+            $permissions = $model->lista_menu_opcion_by_perfil($perfil);
 
             $response = array('permissions' => $permissions);
             return $this->response->setJSON($response);
@@ -143,18 +144,18 @@ class Home extends BaseController
         if (isset($_GET['m'])) {
             $menu = base64_decode($_GET['m']);
 
-            if ($menu=="virtual"){                
+            if ($menu == "virtual") {
                 echo json_encode(array('permitido' => "true"));
                 return false;
             }
         }
-       
+
         if (isset(session()->get("data")["perfil"])) {
-            $perfil =session()->get("data")["perfil"]; 
-           
+            $perfil = session()->get("data")["perfil"];
+
             $model = new HomeModel();
-            $permiso = $model->menu_by_perfil($perfil, $menu); 
-            $permitido = !empty($permiso); 
+            $permiso = $model->menu_by_perfil($perfil, $menu);
+            $permitido = !empty($permiso);
 
             $response = array('permitido' => $permitido);
             return $this->response->setJSON($response);
